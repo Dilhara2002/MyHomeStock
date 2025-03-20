@@ -1,129 +1,107 @@
-const ShoppingList = require('../models/ShoppingList'); // Assuming you have a ShoppingList model
-const Inventory = require('../models/Inventory'); // Assuming you have an Inventory model
+import ShoppingList from "../models/shoppingListModel.js";
+import Inventory from "../models/inventoryModel.js";
 
-// Auto-Add Low-Stock Items to the Shopping List
-const autoAddLowStockItems = async (req, res) => {
+// Get all shopping lists for a user
+export const getAllShoppingLists = async (req, res) => {
+  const { userId } = req.params;
+  
   try {
-    const lowStockThreshold = 5;
-    const inventoryItems = await Inventory.find();
+    const shoppingList = await ShoppingList.findOne({ userId });
 
-    const lowStockItems = inventoryItems.filter(item => item.quantity < lowStockThreshold);
+    if (!shoppingList) {
+      return res.status(404).json({ message: "Shopping list not found" });
+    }
 
-    const shoppingListItems = await ShoppingList.find();
-
-    // Add low-stock items to the shopping list if they are not already in the list
-    const itemsToAdd = lowStockItems.filter(item => {
-      return !shoppingListItems.some(shoppingItem => shoppingItem.itemId.toString() === item._id.toString());
-    });
-
-    const itemsToAddPromises = itemsToAdd.map(item => {
-      return ShoppingList.create({
-        itemId: item._id,
-        name: item.name,
-        quantity: 1,  // Default quantity
-      });
-    });
-
-    await Promise.all(itemsToAddPromises);
-
-    res.status(200).json({ message: 'Low-stock items added to shopping list successfully' });
+    return res.status(200).json({ shoppingList });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to auto-add low-stock items' });
+    console.error("Error fetching shopping list:", err);
+    return res.status(500).json({ message: "Failed to fetch shopping list" });
   }
 };
 
-// Add Item to the Shopping List
-const addItem = async (req, res) => {
-  try {
-    const { itemId, quantity } = req.body;
-    const inventoryItem = await Inventory.findById(itemId);
+// Add an item to the shopping list
+export const addItemToShoppingList = async (req, res) => {
+  const { userId, itemName, quantity } = req.body;
 
-    if (!inventoryItem) {
-      return res.status(400).json({ error: 'Item not found in inventory' });
+  if (!itemName || !quantity) {
+    return res.status(400).json({ message: "Item name and quantity are required" });
+  }
+
+  try {
+    let shoppingList = await ShoppingList.findOne({ userId });
+
+    if (!shoppingList) {
+      shoppingList = new ShoppingList({ userId, items: [] });
     }
 
-    // Check if the item is already in the shopping list
-    const existingItem = await ShoppingList.findOne({ itemId });
+    const existingItem = shoppingList.items.find(item => item.name === itemName);
 
     if (existingItem) {
-      return res.status(400).json({ error: 'Item already exists in the shopping list' });
+      return res.status(400).json({ message: "Item already in shopping list" });
     }
 
-    // Add the item to the shopping list
-    const newItem = await ShoppingList.create({
-      itemId,
-      name: inventoryItem.name,
-      quantity,
-    });
+    shoppingList.items.push({ name: itemName, quantity, addedAutomatically: false });
+    await shoppingList.save();
 
-    res.status(201).json({ message: 'Item added to shopping list', item: newItem });
+    return res.status(201).json({ shoppingList });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add item to shopping list' });
+    console.error("Error adding item to shopping list:", err);
+    return res.status(500).json({ message: "Failed to add item" });
   }
 };
 
-// Remove Item from the Shopping List
-const removeItem = async (req, res) => {
-  try {
-    const { itemId } = req.params;
-    const item = await ShoppingList.findOneAndDelete({ itemId });
+// Remove an item from the shopping list
+export const removeItemFromShoppingList = async (req, res) => {
+  const { userId, itemName } = req.params;
 
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found in shopping list' });
+  try {
+    const shoppingList = await ShoppingList.findOne({ userId });
+
+    if (!shoppingList) {
+      return res.status(404).json({ message: "Shopping list not found" });
     }
 
-    res.status(200).json({ message: 'Item removed from shopping list' });
+    const itemIndex = shoppingList.items.findIndex(item => item.name === itemName);
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ message: "Item not found in shopping list" });
+    }
+
+    shoppingList.items.splice(itemIndex, 1);
+    await shoppingList.save();
+
+    return res.status(200).json({ message: "Item removed successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to remove item from shopping list' });
+    console.error("Error removing item from shopping list:", err);
+    return res.status(500).json({ message: "Failed to remove item" });
   }
 };
 
-// Fetch Shopping List Items
-const getShoppingList = async (req, res) => {
+// Auto-add low-stock items to the shopping list
+export const autoAddLowStockItems = async (req, res) => {
+  const { userId } = req.params;
+  
   try {
-    const shoppingList = await ShoppingList.find().populate('itemId'); // Populate item details from inventory
-    res.status(200).json({ shoppingList });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch shopping list' });
-  }
-};
+    const shoppingList = await ShoppingList.findOne({ userId });
+    const lowStockItems = await Inventory.find({ quantity: { $lt: 5 } });
 
-// Fetch Frequently Purchased Items
-const getFrequentlyPurchasedItems = async (req, res) => {
-  try {
-    const shoppingListItems = await ShoppingList.find();
+    if (!shoppingList) {
+      return res.status(404).json({ message: "Shopping list not found" });
+    }
 
-    const purchaseFrequency = {};
+    lowStockItems.forEach(item => {
+      const existingItem = shoppingList.items.find(i => i.name === item.name);
 
-    // Count how many times each item is added to the shopping list
-    shoppingListItems.forEach(item => {
-      if (purchaseFrequency[item.itemId]) {
-        purchaseFrequency[item.itemId] += item.quantity;
-      } else {
-        purchaseFrequency[item.itemId] = item.quantity;
+      if (!existingItem) {
+        shoppingList.items.push({ name: item.name, quantity: 1, addedAutomatically: true });
       }
     });
 
-    // Sort items by frequency
-    const frequentItems = Object.entries(purchaseFrequency)
-      .sort((a, b) => b[1] - a[1])  // Sort by frequency in descending order
-      .map(([itemId, frequency]) => ({ itemId, frequency }));
+    await shoppingList.save();
 
-    res.status(200).json({ frequentItems });
+    return res.status(200).json({ shoppingList });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch frequently purchased items' });
+    console.error("Error auto-adding low-stock items:", err);
+    return res.status(500).json({ message: "Failed to auto-add items" });
   }
-};
-
-module.exports = {
-  autoAddLowStockItems,
-  addItem,
-  removeItem,
-  getShoppingList,
-  getFrequentlyPurchasedItems,
 };
