@@ -3,6 +3,9 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';  
 import CategoryRoute from './Route/CategoryRoute.js';  // Ensure correct import path for CategoryRoute
+import InventoryRoute from "./Route/InventoryRoute.js"; // Import inventory routes
+import UserRoute from "./Route/UserRoute.js"; 
+
 
 // Load environment variables from .env file
 dotenv.config();
@@ -25,6 +28,8 @@ mongoose.connect(mongoURI, {
 
 // Use the category routes
 app.use('/', CategoryRoute);  // Ensure the route paths are handled correctly
+app.use("/inventory", InventoryRoute); // Handling inventory routes
+app.use("/users", UserRoute); 
 
 // Start the server
 const port = process.env.PORT || 5002;
