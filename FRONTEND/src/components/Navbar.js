@@ -5,10 +5,11 @@ import axios from "axios";
 
 const Navbar = () => {
   const [profilePicture, setProfilePicture] = useState("");
+  const [userId, setUserId] = useState(null);  // To store the userId
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user profile picture on component mount
+  // Fetch user profile picture and userId on component mount
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -19,6 +20,10 @@ const Navbar = () => {
 
         if (response.data.profilePicture) {
           setProfilePicture(response.data.profilePicture);
+        }
+        
+        if (response.data.userId) {
+          setUserId(response.data.userId); // Set the userId from the profile API
         }
       } catch (error) {
         console.error("Error fetching profile picture:", error);
@@ -63,11 +68,14 @@ const Navbar = () => {
                 Inventory
               </Link>
             </li>
+
+            {/* Shopping List link with userId as a parameter */}
             <li className="nav-item">
-              <Link to="/shopping-list" className="nav-link">
+              <Link to={`/shopping-list/${userId}`} className="nav-link">
                 Shopping List
               </Link>
             </li>
+
             <li className="nav-item">
               <Link to="/profile" className="nav-link">
                 Profile
