@@ -6,11 +6,13 @@ import "bootstrap/dist/css/bootstrap.min.css";
 const Profile = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [profilePicture, setProfilePicture] = useState("");
+  const [profilePicture, setProfilePicture] = useState(null); // store file object
+  const [preview, setPreview] = useState(""); // for image preview
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  // Fetch user profile data
+  // Fetch user profile data when the component mounts
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -22,7 +24,9 @@ const Profile = () => {
         const { name, email, profilePicture } = response.data;
         setName(name);
         setEmail(email);
-        setProfilePicture(profilePicture || "");
+
+        // If profilePicture is available, set the preview URL
+        setPreview(profilePicture || ""); 
       } catch (error) {
         setError("Error fetching profile");
       }
@@ -31,41 +35,35 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  // Handle profile update
+  // Handle profile update with image upload
   const handleUpdate = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const formData = new FormData();
+    formData.append("name", name);
+    if (profilePicture) {
+      formData.append("profilePicture", profilePicture); // Add the image file to the form data
+    }
 
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
         "http://localhost:5002/users/profile",
-        { name, profilePicture },
+        formData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data", // Set content type for file upload
+          },
         }
       );
 
-      alert("Profile updated successfully");
-      setProfilePicture(response.data.profilePicture || "");
+      setSuccess("Profile updated successfully");
+      setPreview(response.data.profilePicture);  // Get the image URL returned by the backend
     } catch (error) {
       setError("Error updating profile");
-    }
-  };
-
-  // Handle account deletion
-  const handleDeleteAccount = async () => {
-    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.delete("http://localhost:5002/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        localStorage.removeItem("token");
-        navigate("/login");
-      } catch (error) {
-        setError("Error deleting account: " + error.message);
-      }
     }
   };
 
@@ -75,33 +73,66 @@ const Profile = () => {
     navigate("/login");
   };
 
+  // Handle file input change for profile picture
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setProfilePicture(file);
+
+    // Preview the selected image
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result); // Set the preview image from file
+    };
+    reader.readAsDataURL(file); // Read file as data URL for preview
+  };
+
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
         <div className="col-md-6">
-          <div className="card">
-            <div className="card-body">
-              <h2 className="card-title text-center">Profile</h2>
+          <div className="card" style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.1)", borderRadius: "8px" }}>
+            <div className="card-body" style={{ padding: "2rem" }}>
+              <h2 className="card-title text-center mb-4" style={{ color: "#3a5a97", fontWeight: "600" }}>My Profile</h2>
+              
               {error && <div className="alert alert-danger">{error}</div>}
+              {success && <div className="alert alert-success">{success}</div>}
 
               {/* Profile Picture */}
               <div className="text-center mb-4">
-                {profilePicture ? (
-                  <img
-                    src={profilePicture}
-                    alt="Profile"
-                    className="rounded-circle"
-                    style={{ width: "100px", height: "100px", objectFit: "cover" }}
-                  />
-                ) : (
-                  <i className="fas fa-user-circle" style={{ fontSize: "100px", color: "#ccc" }}></i>
-                )}
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt="Profile"
+                      className="rounded-circle"
+                      style={{ 
+                        width: "120px", 
+                        height: "120px", 
+                        objectFit: "cover",
+                        border: "3px solid #4a6fdc",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+                      }}
+                    />
+                  ) : (
+                    <div 
+                      className="rounded-circle d-flex align-items-center justify-content-center bg-light" 
+                      style={{ 
+                        width: "120px", 
+                        height: "120px",
+                        border: "3px solid #e1e1e1",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+                      }}
+                    >
+                      <i className="fas fa-user" style={{ fontSize: "50px", color: "#adb5bd" }}></i>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Profile Form */}
               <form onSubmit={handleUpdate}>
                 <div className="mb-3">
-                  <label htmlFor="name" className="form-label">
+                  <label htmlFor="name" className="form-label" style={{ fontWeight: "500" }}>
                     Name
                   </label>
                   <input
@@ -111,10 +142,11 @@ const Profile = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    style={{ padding: "0.6rem", borderRadius: "6px" }}
                   />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="email" className="form-label">
+                  <label htmlFor="email" className="form-label" style={{ fontWeight: "500" }}>
                     Email
                   </label>
                   <input
@@ -123,36 +155,60 @@ const Profile = () => {
                     id="email"
                     value={email}
                     disabled
+                    style={{ 
+                      padding: "0.6rem", 
+                      borderRadius: "6px",
+                      backgroundColor: "#f8f9fa"
+                    }}
                   />
                 </div>
-                <div className="mb-3">
-                  <label htmlFor="profilePicture" className="form-label">
-                    Profile Picture URL
+                <div className="mb-4">
+                  <label htmlFor="profilePicture" className="form-label" style={{ fontWeight: "500" }}>
+                    Profile Picture
                   </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="profilePicture"
-                    value={profilePicture}
-                    onChange={(e) => setProfilePicture(e.target.value)}
-                  />
+                  <div className="input-group">
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="profilePicture"
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      style={{ borderRadius: "6px" }}
+                    />
+                  </div>
+                  <small className="form-text text-muted mt-1">
+                    Upload a square image for best results
+                  </small>
                 </div>
-                <button type="submit" className="btn btn-primary w-100">
+                
+                <button 
+                  type="submit" 
+                  className="btn btn-primary w-100"
+                  style={{ 
+                    padding: "0.7rem", 
+                    borderRadius: "6px", 
+                    backgroundColor: "#4a6fdc", 
+                    borderColor: "#4a6fdc",
+                    fontWeight: "500",
+                    fontSize: "1.05rem" 
+                  }}
+                >
                   Update Profile
                 </button>
               </form>
 
-              {/* Delete Account and Sign Out Buttons */}
-              <div className="mt-4">
-                <button
-                  onClick={handleDeleteAccount}
-                  className="btn btn-danger w-100 mb-2"
-                >
-                  Delete Account
-                </button>
+              {/* Sign Out Button */}
+              <div className="mt-4 pt-3" style={{ borderTop: "1px solid #e9ecef" }}>
                 <button
                   onClick={handleSignOut}
-                  className="btn btn-secondary w-100"
+                  className="btn w-100"
+                  style={{ 
+                    padding: "0.7rem", 
+                    borderRadius: "6px",
+                    backgroundColor: "#f1f3f5",
+                    color: "#495057",
+                    fontWeight: "500" 
+                  }}
                 >
                   Sign Out
                 </button>
