@@ -19,6 +19,7 @@ const Login = () => {
       });
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", response.data.user._id);
       navigate("/dashboard");
     } catch (error) {
       setError("Invalid credentials");

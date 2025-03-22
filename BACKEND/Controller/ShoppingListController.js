@@ -1,107 +1,75 @@
-import ShoppingList from "../models/shoppingListModel.js";
-import Inventory from "../models/inventoryModel.js";
+import ShoppingList from "../Model/ShoppingListmodel.js";
 
-// Get all shopping lists for a user
-export const getAllShoppingLists = async (req, res) => {
+// Fetch shopping list for a user
+export const fetchShoppingList = async (req, res) => {
   const { userId } = req.params;
-  
   try {
-    const shoppingList = await ShoppingList.findOne({ userId });
-
+    let shoppingList = await ShoppingList.findOne({ userId });
+    
     if (!shoppingList) {
-      return res.status(404).json({ message: "Shopping list not found" });
+      shoppingList = new ShoppingList({ userId, items: [] });
+      await shoppingList.save();
     }
 
-    return res.status(200).json({ shoppingList });
+    return res.status(200).json(shoppingList);
   } catch (err) {
     console.error("Error fetching shopping list:", err);
-    return res.status(500).json({ message: "Failed to fetch shopping list" });
+    return res.status(500).json({ message: "Error fetching shopping list" });
   }
 };
 
 // Add an item to the shopping list
-export const addItemToShoppingList = async (req, res) => {
+export const addToShoppingList = async (req, res) => {
   const { userId, itemName, quantity } = req.body;
 
+  // Validate the request body
   if (!itemName || !quantity) {
     return res.status(400).json({ message: "Item name and quantity are required" });
   }
 
   try {
     let shoppingList = await ShoppingList.findOne({ userId });
-
+    
     if (!shoppingList) {
       shoppingList = new ShoppingList({ userId, items: [] });
     }
 
+    // Check if item already exists in the shopping list
     const existingItem = shoppingList.items.find(item => item.name === itemName);
-
     if (existingItem) {
-      return res.status(400).json({ message: "Item already in shopping list" });
+      // If item exists, update the quantity
+      existingItem.quantity += quantity;
+    } else {
+      // If item doesn't exist, add it
+      shoppingList.items.push({ name: itemName, quantity });
     }
 
-    shoppingList.items.push({ name: itemName, quantity, addedAutomatically: false });
     await shoppingList.save();
-
-    return res.status(201).json({ shoppingList });
+    return res.status(201).json({ success: true, message: "Item added successfully", shoppingList });
   } catch (err) {
     console.error("Error adding item to shopping list:", err);
-    return res.status(500).json({ message: "Failed to add item" });
+    return res.status(500).json({ message: "Error adding item to shopping list" });
   }
 };
 
 // Remove an item from the shopping list
-export const removeItemFromShoppingList = async (req, res) => {
+export const removeFromShoppingList = async (req, res) => {
   const { userId, itemName } = req.params;
-
-  try {
-    const shoppingList = await ShoppingList.findOne({ userId });
-
-    if (!shoppingList) {
-      return res.status(404).json({ message: "Shopping list not found" });
-    }
-
-    const itemIndex = shoppingList.items.findIndex(item => item.name === itemName);
-
-    if (itemIndex === -1) {
-      return res.status(404).json({ message: "Item not found in shopping list" });
-    }
-
-    shoppingList.items.splice(itemIndex, 1);
-    await shoppingList.save();
-
-    return res.status(200).json({ message: "Item removed successfully" });
-  } catch (err) {
-    console.error("Error removing item from shopping list:", err);
-    return res.status(500).json({ message: "Failed to remove item" });
-  }
-};
-
-// Auto-add low-stock items to the shopping list
-export const autoAddLowStockItems = async (req, res) => {
-  const { userId } = req.params;
   
   try {
     const shoppingList = await ShoppingList.findOne({ userId });
-    const lowStockItems = await Inventory.find({ quantity: { $lt: 5 } });
 
     if (!shoppingList) {
       return res.status(404).json({ message: "Shopping list not found" });
     }
 
-    lowStockItems.forEach(item => {
-      const existingItem = shoppingList.items.find(i => i.name === item.name);
-
-      if (!existingItem) {
-        shoppingList.items.push({ name: item.name, quantity: 1, addedAutomatically: true });
-      }
-    });
-
+    // Remove item from the list
+    shoppingList.items = shoppingList.items.filter((item) => item.name !== itemName);
     await shoppingList.save();
 
-    return res.status(200).json({ shoppingList });
+    return res.status(200).json({ success: true, message: "Item removed successfully" });
   } catch (err) {
-    console.error("Error auto-adding low-stock items:", err);
-    return res.status(500).json({ message: "Failed to auto-add items" });
+    console.error("Error removing item:", err);
+    return res.status(500).json({ message: "Error removing item" });
   }
 };

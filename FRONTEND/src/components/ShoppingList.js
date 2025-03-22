@@ -1,192 +1,171 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, List, ListItem, ListItemText, IconButton, Paper, Grid, Divider, Badge } from '@mui/material';
-import { Delete, Add, ShoppingCart, Edit } from '@mui/icons-material';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 const ShoppingList = () => {
+  const [inventoryItems, setInventoryItems] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
-  const [itemName, setItemName] = useState('');
+  const [selectedItem, setSelectedItem] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editItemName, setEditItemName] = useState('');
-  const [editQuantity, setEditQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  // Fetch shopping list for the user
+  // Fetch inventory items
   useEffect(() => {
-    const userId = 'someUserId'; // Replace with actual userId
-    const fetchShoppingList = async () => {
+    const fetchInventoryItems = async () => {
       try {
-        const response = await fetch(`/api/shopping-list/${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setShoppingList(data.shoppingList.items);
-        } else {
-          console.error('Failed to fetch shopping list');
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
         }
+        const response = await axios.get("http://localhost:5002/inventory", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setInventoryItems(response.data);
       } catch (error) {
-        console.error('Error fetching shopping list:', error);
+        setError("Error fetching inventory items");
       }
     };
+    fetchInventoryItems();
+  }, [navigate]);
 
-    fetchShoppingList();
-  }, []);
-
-  // Add item to shopping list
-  const addItem = async () => {
-    if (itemName.trim() && quantity > 0) {
-      const userId = 'someUserId'; // Replace with actual userId
-      const newItem = { userId, itemName, quantity };
+  // Fetch shopping list
+  useEffect(() => {
+    const fetchShoppingList = async () => {
       try {
-        const response = await fetch('/api/shopping-list/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(newItem)
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setShoppingList(data.shoppingList.items); // Update shopping list
-          setItemName('');
-          setQuantity(1);
-        } else {
-          setError('Failed to add item');
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
         }
+        const response = await axios.get("http://localhost:5002/shopping-list", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setShoppingList(response.data.items);
       } catch (error) {
-        setError('Failed to add item');
+        setError("Error fetching shopping list");
+      }
+    };
+    fetchShoppingList();
+  }, [navigate]);
+
+  // Handle adding items to the shopping list
+  const handleAddToShoppingList = async () => {
+    if (selectedItem && quantity > 0) {
+      try {
+        const token = localStorage.getItem("token");
+        const user = localStorage.getItem("user");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const newItem = { userId:user, itemName: selectedItem, quantity };
+
+        const response = await axios.post("http://localhost:5002/shopping-list/add", newItem, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setShoppingList([...shoppingList, response.data.shoppingList.items[response.data.shoppingList.items.length - 1]]);
+        setSelectedItem("");
+        setQuantity(1);
+      } catch (error) {
+        setError("Error adding item to shopping list");
       }
     } else {
-      setError('Please provide a valid item name and quantity');
+      setError("Please select an item and specify quantity.");
     }
   };
 
-  // Remove item from shopping list
-  const removeItem = async (itemName) => {
-    const userId = 'someUserId'; // Replace with actual userId
+  // Handle deleting items from the shopping list
+  const handleDeleteFromShoppingList = async (itemName) => {
     try {
-      const response = await fetch(`/api/shopping-list/remove/${userId}/${itemName}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setShoppingList(data.shoppingList.items); // Update shopping list
-      } else {
-        setError('Failed to remove item');
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
       }
-    } catch (error) {
-      setError('Failed to remove item');
-    }
-  };
 
-  // Edit item in shopping list
-  const startEdit = (itemName, quantity) => {
-    setIsEditing(true);
-    setEditItemName(itemName);
-    setEditQuantity(quantity);
-  };
-
-  const saveEdit = async () => {
-    const userId = 'someUserId'; // Replace with actual userId
-    const updatedItem = { userId, itemName: editItemName, quantity: editQuantity };
-    try {
-      const response = await fetch('/api/shopping-list/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedItem)
+      await axios.delete(`http://localhost:5002/shopping-list/remove/${itemName}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) {
-        const data = await response.json();
-        setShoppingList(data.shoppingList.items); // Update shopping list
-        setIsEditing(false);
-        setEditItemName('');
-        setEditQuantity(1);
-      } else {
-        setError('Failed to update item');
-      }
+
+      setShoppingList(shoppingList.filter((item) => item.name !== itemName));
     } catch (error) {
-      setError('Failed to update item');
+      setError("Error deleting item from shopping list");
     }
   };
 
   return (
-    <Paper elevation={3} sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <ShoppingCart sx={{ mr: 2, color: '#3b82f6' }} />
-        <Typography variant="h5" fontWeight="bold">
-          Your Shopping List
-        </Typography>
-        <Badge badgeContent={shoppingList.length} color="primary" sx={{ ml: 2 }} />
-      </Box>
-      <Divider sx={{ mb: 3 }} />
+    <div className="container mt-5" style={{ maxWidth: "1200px" }}>
+      <h2 className="text-center mb-4 text-primary fw-bold">🛒 Shopping List</h2>
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* Error Message */}
-      {error && <Typography color="error">{error}</Typography>}
-
-      {/* Add Item Section */}
-      {!isEditing ? (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            label="Item Name"
-            fullWidth
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Quantity"
-            type="number"
-            fullWidth
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Button variant="contained" color="primary" fullWidth onClick={addItem}>
-            Add Item
-          </Button>
-        </Box>
-      ) : (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            label="Edit Item Name"
-            fullWidth
-            value={editItemName}
-            onChange={(e) => setEditItemName(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Edit Quantity"
-            type="number"
-            fullWidth
-            value={editQuantity}
-            onChange={(e) => setEditQuantity(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Button variant="contained" color="primary" fullWidth onClick={saveEdit}>
-            Save Changes
-          </Button>
-        </Box>
-      )}
+      {/* Add to Shopping List Section */}
+      <div className="mb-4">
+        <h5 className="fw-bold">Add Item to Shopping List</h5>
+        <div className="row">
+          <div className="col-md-6">
+            <label htmlFor="itemDropdown" className="form-label">Select Item</label>
+            <select
+              id="itemDropdown"
+              className="form-select"
+              value={selectedItem}
+              onChange={(e) => setSelectedItem(e.target.value)}
+            >
+              <option value="">Select an Item</option>
+              {inventoryItems.map((item) => (
+                <option key={item._id} value={item.name}>{item.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-3">
+            <label htmlFor="quantity" className="form-label">Quantity</label>
+            <input
+              type="number"
+              id="quantity"
+              className="form-control"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              min="1"
+            />
+          </div>
+          <div className="col-md-3 d-flex align-items-end">
+            <button onClick={handleAddToShoppingList} className="btn btn-success">
+              ➕ Add to Shopping List
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Shopping List */}
-      <List>
-        {shoppingList.map((item, index) => (
-          <ListItem key={index} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <ListItemText primary={item.name} secondary={`Quantity: ${item.quantity}`} />
-            <Box>
-              <IconButton color="primary" onClick={() => startEdit(item.name, item.quantity)}>
-                <Edit />
-              </IconButton>
-              <IconButton color="secondary" onClick={() => removeItem(item.name)}>
-                <Delete />
-              </IconButton>
-            </Box>
-          </ListItem>
-        ))}
-      </List>
-    </Paper>
+      <h5 className="fw-bold mb-3">Your Shopping List</h5>
+      <table className="table table-hover table-bordered shadow-sm rounded" style={{ borderRadius: "10px", overflow: "hidden" }}>
+        <thead className="bg-primary text-white">
+          <tr>
+            <th>Name</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shoppingList.map((item, index) => (
+            <tr key={index} className="align-middle">
+              <td>{item.name}</td>
+              <td>{item.quantity}</td>
+              <td>
+                <button onClick={() => handleDeleteFromShoppingList(item.name)} className="btn btn-danger btn-sm">
+                  <i className="bi bi-trash"></i> Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
