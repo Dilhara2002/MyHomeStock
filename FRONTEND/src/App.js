@@ -30,7 +30,7 @@ const App = () => {
           <Route path="/signup" element={<Signup />} />
 
           {/* Protected routes */}
-          <Route path="/dashboard" element={isAuthenticated ? <InventoryList /> : <Navigate to="/login" />} />
+          <Route path="/Inventory" element={isAuthenticated ? <InventoryList /> : <Navigate to="/login" />} />
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
           <Route path="/inventory/:action/:id?" element={isAuthenticated ? <InventoryForm /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />

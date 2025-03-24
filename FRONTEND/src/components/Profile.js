@@ -2,17 +2,106 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faEdit, faTrash, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 
 const Profile = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [profilePicture, setProfilePicture] = useState(null); // store file object
-  const [preview, setPreview] = useState(""); // for image preview
+  const [profilePicture, setProfilePicture] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  // Fetch user profile data when the component mounts
+  // Custom styles
+  const styles = {
+    profileContainer: {
+      backgroundColor: "#f8f9fa",
+      minHeight: "100vh",
+      padding: "40px 0",
+      backgroundImage: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+    },
+    card: {
+      borderRadius: "15px",
+      border: "none",
+      boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+      overflow: "hidden",
+    },
+    cardHeader: {
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      color: "white",
+      padding: "25px 0",
+      borderRadius: "15px 15px 0 0",
+    },
+    cardBody: {
+      padding: "30px",
+    },
+    profilePicContainer: {
+      position: "relative",
+      margin: "-65px auto 20px",
+      width: "130px",
+      height: "130px",
+      borderRadius: "50%",
+      overflow: "hidden",
+      boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
+      border: "5px solid white",
+      backgroundColor: "#e9ecef",
+    },
+    profilePic: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    },
+    defaultProfileIcon: {
+      fontSize: "60px",
+      color: "#adb5bd",
+      marginTop: "25px",
+    },
+    formLabel: {
+      fontWeight: "600",
+      color: "#495057",
+      fontSize: "14px",
+      marginBottom: "8px",
+    },
+    formControl: {
+      borderRadius: "8px",
+      padding: "12px 15px",
+      border: "1px solid #ced4da",
+      transition: "all 0.3s ease",
+    },
+    primaryBtn: {
+      backgroundImage: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      border: "none",
+      borderRadius: "8px",
+      padding: "12px 25px",
+      fontWeight: "600",
+      transition: "all 0.3s ease",
+      boxShadow: "0 5px 15px rgba(102, 126, 234, 0.4)",
+    },
+    dangerBtn: {
+      backgroundColor: "#ff6b6b",
+      border: "none",
+      borderRadius: "8px",
+      padding: "12px 0",
+      fontWeight: "600",
+      transition: "all 0.3s ease",
+      boxShadow: "0 5px 15px rgba(255, 107, 107, 0.4)",
+    },
+    secondaryBtn: {
+      backgroundColor: "#6c757d",
+      border: "none",
+      borderRadius: "8px",
+      padding: "12px 0",
+      fontWeight: "600",
+      transition: "all 0.3s ease",
+    },
+    divider: {
+      margin: "30px 0",
+      borderTop: "1px solid #dee2e6",
+    }
+  };
+
+  // Fetch user profile data
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -24,46 +113,55 @@ const Profile = () => {
         const { name, email, profilePicture } = response.data;
         setName(name);
         setEmail(email);
-
-        // If profilePicture is available, set the preview URL
-        setPreview(profilePicture || ""); 
+        setProfilePicture(profilePicture || "");
       } catch (error) {
-        setError("Error fetching profile");
+        setError("Failed to load profile information. Please try again later.");
       }
     };
 
     fetchProfile();
   }, []);
 
-  // Handle profile update with image upload
+  // Handle profile update
   const handleUpdate = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    const formData = new FormData();
-    formData.append("name", name);
-    if (profilePicture) {
-      formData.append("profilePicture", profilePicture); // Add the image file to the form data
-    }
-
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
         "http://localhost:5002/users/profile",
-        formData,
+        { name, profilePicture },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data", // Set content type for file upload
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      setSuccess("Profile updated successfully");
-      setPreview(response.data.profilePicture);  // Get the image URL returned by the backend
+      setSuccess("Profile updated successfully!");
+      setProfilePicture(response.data.profilePicture || "");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
     } catch (error) {
-      setError("Error updating profile");
+      setError("Failed to update profile. Please try again.");
+    }
+  };
+
+  // Handle account deletion
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      try {
+        const token = localStorage.getItem("token");
+        await axios.delete(`http://localhost:5002/users/${email}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        localStorage.removeItem("token");
+        navigate("/login");
+      } catch (error) {
+        setError("Error deleting account: " + error.message);
+      }
     }
   };
 
@@ -73,146 +171,136 @@ const Profile = () => {
     navigate("/login");
   };
 
-  // Handle file input change for profile picture
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setProfilePicture(file);
-
-    // Preview the selected image
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result); // Set the preview image from file
-    };
-    reader.readAsDataURL(file); // Read file as data URL for preview
-  };
-
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="card" style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.1)", borderRadius: "8px" }}>
-            <div className="card-body" style={{ padding: "2rem" }}>
-              <h2 className="card-title text-center mb-4" style={{ color: "#3a5a97", fontWeight: "600" }}>My Profile</h2>
-              
-              {error && <div className="alert alert-danger">{error}</div>}
-              {success && <div className="alert alert-success">{success}</div>}
-
-              {/* Profile Picture */}
-              <div className="text-center mb-4">
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  {preview ? (
-                    <img
-                      src={preview}
-                      alt="Profile"
-                      className="rounded-circle"
-                      style={{ 
-                        width: "120px", 
-                        height: "120px", 
-                        objectFit: "cover",
-                        border: "3px solid #4a6fdc",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-                      }}
-                    />
-                  ) : (
-                    <div 
-                      className="rounded-circle d-flex align-items-center justify-content-center bg-light" 
-                      style={{ 
-                        width: "120px", 
-                        height: "120px",
-                        border: "3px solid #e1e1e1",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-                      }}
-                    >
-                      <i className="fas fa-user" style={{ fontSize: "50px", color: "#adb5bd" }}></i>
-                    </div>
-                  )}
-                </div>
+    <div style={styles.profileContainer}>
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-md-8 col-lg-6">
+            <div className="card" style={styles.card}>
+              <div className="text-center" style={styles.cardHeader}>
+                <h1 className="mb-0">My Profile</h1>
               </div>
-
-              {/* Profile Form */}
-              <form onSubmit={handleUpdate}>
-                <div className="mb-3">
-                  <label htmlFor="name" className="form-label" style={{ fontWeight: "500" }}>
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    style={{ padding: "0.6rem", borderRadius: "6px" }}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="email" className="form-label" style={{ fontWeight: "500" }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    id="email"
-                    value={email}
-                    disabled
-                    style={{ 
-                      padding: "0.6rem", 
-                      borderRadius: "6px",
-                      backgroundColor: "#f8f9fa"
-                    }}
-                  />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="profilePicture" className="form-label" style={{ fontWeight: "500" }}>
-                    Profile Picture
-                  </label>
-                  <div className="input-group">
-                    <input
-                      type="file"
-                      className="form-control"
-                      id="profilePicture"
-                      onChange={handleFileChange}
-                      accept="image/*"
-                      style={{ borderRadius: "6px" }}
-                    />
+              
+              <div className="card-body" style={styles.cardBody}>
+                {/* Profile Picture */}
+                <div className="text-center">
+                  <div style={styles.profilePicContainer}>
+                    {profilePicture ? (
+                      <img
+                        src={profilePicture}
+                        alt="Profile"
+                        style={styles.profilePic}
+                      />
+                    ) : (
+                      <FontAwesomeIcon icon={faUser} style={styles.defaultProfileIcon} />
+                    )}
                   </div>
-                  <small className="form-text text-muted mt-1">
-                    Upload a square image for best results
-                  </small>
                 </div>
                 
-                <button 
-                  type="submit" 
-                  className="btn btn-primary w-100"
-                  style={{ 
-                    padding: "0.7rem", 
-                    borderRadius: "6px", 
-                    backgroundColor: "#4a6fdc", 
-                    borderColor: "#4a6fdc",
-                    fontWeight: "500",
-                    fontSize: "1.05rem" 
-                  }}
-                >
-                  Update Profile
-                </button>
-              </form>
+                {/* Alerts */}
+                {error && (
+                  <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                    {error}
+                    <button type="button" className="btn-close" onClick={() => setError("")}></button>
+                  </div>
+                )}
+                
+                {success && (
+                  <div className="alert alert-success alert-dismissible fade show" role="alert">
+                    {success}
+                    <button type="button" className="btn-close" onClick={() => setSuccess("")}></button>
+                  </div>
+                )}
 
-              {/* Sign Out Button */}
-              <div className="mt-4 pt-3" style={{ borderTop: "1px solid #e9ecef" }}>
-                <button
-                  onClick={handleSignOut}
-                  className="btn w-100"
-                  style={{ 
-                    padding: "0.7rem", 
-                    borderRadius: "6px",
-                    backgroundColor: "#f1f3f5",
-                    color: "#495057",
-                    fontWeight: "500" 
-                  }}
-                >
-                  Sign Out
-                </button>
+                {/* Profile Form */}
+                <form onSubmit={handleUpdate} className="mt-4">
+                  <div className="mb-4">
+                    <label htmlFor="name" style={styles.formLabel}>
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="name"
+                      style={styles.formControl}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="email" style={styles.formLabel}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      id="email"
+                      style={{...styles.formControl, backgroundColor: "#f8f9fa"}}
+                      value={email}
+                      readOnly
+                      disabled
+                    />
+                    <small className="text-muted">Email address cannot be changed</small>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="profilePicture" style={styles.formLabel}>
+                      Profile Picture URL
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="profilePicture"
+                      style={styles.formControl}
+                      value={profilePicture}
+                      onChange={(e) => setProfilePicture(e.target.value)}
+                      placeholder="https://example.com/profile-picture.jpg"
+                    />
+                    <small className="text-muted">Enter a valid image URL for your profile picture</small>
+                  </div>
+                  
+                  <div className="d-grid">
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary" 
+                      style={styles.primaryBtn}
+                    >
+                      <FontAwesomeIcon icon={faEdit} className="me-2" />
+                      Update Profile
+                    </button>
+                  </div>
+                </form>
+
+                <hr style={styles.divider} />
+
+                {/* Account Actions */}
+                <div className="d-grid gap-3">
+                  <button 
+                    onClick={handleDeleteAccount} 
+                    className="btn btn-danger" 
+                    style={styles.dangerBtn}
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="me-2" />
+                    Delete Account
+                  </button>
+                  
+                  <button 
+                    onClick={handleSignOut} 
+                    className="btn btn-secondary" 
+                    style={styles.secondaryBtn}
+                  >
+                    <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />
+                    Sign Out
+                  </button>
+                </div>
               </div>
+            </div>
+            
+            <div className="text-center mt-4 text-muted">
+              <small>&copy; {new Date().getFullYear()} Your Application Name. All rights reserved.</small>
             </div>
           </div>
         </div>
