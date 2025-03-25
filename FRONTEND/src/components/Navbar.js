@@ -131,10 +131,10 @@ const Navbar = () => {
       return (
         <li className="nav-item">
           <Link 
-            to="/analytics" 
-            className={`nav-link ${isActive('/analytics') ? 'active' : ''}`}
+            to="/admin" 
+            className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
           >
-            <i className="bi bi-graph-up me-1"></i> Analytics
+             Admin Dashboard
           </Link>
         </li>
       );

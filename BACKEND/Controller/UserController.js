@@ -35,38 +35,69 @@ export const signup = async (req, res) => {
 };
 
 // Login a user
+// export const login = async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     console.log("Login Request:", { email, password }); // Debugging
+
+//     // Check if user exists
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       console.log("User not found"); // Debugging
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     console.log("User Found:", user); // Debugging
+
+//     // Check if password matches
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     console.log("Password Match:", isMatch); // Debugging
+
+//     if (!isMatch) {
+//       console.log("Password does not match"); // Debugging
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     // Generate JWT
+//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+//       expiresIn: "30d",
+//     });
+
+//     res.status(200).json({ token, user });
+//   } catch (error) {
+//     console.error("Login Error:", error); // Debugging
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    console.log("Login Request:", { email, password }); // Debugging
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Check if user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      console.log("User not found"); // Debugging
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    const isMatch = await bcrypt.compare(req.body.password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    console.log("User Found:", user); // Debugging
+    const token = jwt.sign(
+      { 
+        id: user._id,
+        role: user.role // Make sure role is included in JWT
+      }, 
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
-    // Check if password matches
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password Match:", isMatch); // Debugging
-
-    if (!isMatch) {
-      console.log("Password does not match"); // Debugging
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "30d",
+    res.status(200).json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, // Explicitly send role
+        profilePicture: user.profilePicture
+      }
     });
-
-    res.status(200).json({ token, user });
   } catch (error) {
-    console.error("Login Error:", error); // Debugging
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -81,7 +112,8 @@ export const getProfile = async (req, res) => {
     res.status(200).json({
       name: user.name,
       email: user.email,
-      profilePicture: user.profilePicture, // ✅ Ensure this is included
+      profilePicture: user.profilePicture,
+      role: user.role,
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
