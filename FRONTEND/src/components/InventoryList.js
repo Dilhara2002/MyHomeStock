@@ -154,7 +154,7 @@ const InventoryList = () => {
         overflow: "hidden"
       }}>
         <div className="card-header" style={{
-          background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+          background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
           color: "white",
           border: "none",
           padding: "25px 30px",
@@ -177,7 +177,9 @@ const InventoryList = () => {
               transition: "all 0.3s ease",
               display: "flex",
               alignItems: "center",
-              gap: "8px"
+              gap: "8px",
+              backgroundColor: "white",
+              color: "#00838F"
             }}>
               <FaPlus /> Add New Item
             </Link>
@@ -260,14 +262,14 @@ const InventoryList = () => {
                   <div style={{ 
                     width: "60px",
                     height: "60px",
-                    backgroundColor: "rgba(76, 175, 80, 0.1)",
+                    backgroundColor: "rgba(0, 188, 212, 0.1)",
                     borderRadius: "12px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     marginRight: "15px"
                   }}>
-                    <FaBoxOpen size={25} style={{ color: "#4CAF50" }} />
+                    <FaBoxOpen size={25} style={{ color: "#00BCD4" }} />
                   </div>
                   <div>
                     <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>{items.length}</h3>
@@ -314,14 +316,14 @@ const InventoryList = () => {
                   <div style={{ 
                     width: "60px",
                     height: "60px",
-                    backgroundColor: "rgba(244, 67, 54, 0.1)",
+                    backgroundColor: "rgba(233, 30, 99, 0.1)",
                     borderRadius: "12px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     marginRight: "15px"
                   }}>
-                    <FaTag size={25} style={{ color: "#F44336" }} />
+                    <FaTag size={25} style={{ color: "#E91E63" }} />
                   </div>
                   <div>
                     <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
@@ -456,8 +458,8 @@ const InventoryList = () => {
                           onClick={() => handleEdit(item)} 
                           className="btn btn-sm me-2" 
                           style={{ 
-                            backgroundColor: "#FFC107",
-                            color: "#212529",
+                            backgroundColor: "#00BCD4",
+                            color: "white",
                             padding: "7px 15px",
                             borderRadius: "6px",
                             fontSize: "14px",
@@ -472,7 +474,7 @@ const InventoryList = () => {
                           onClick={() => handleDelete(item._id)} 
                           className="btn btn-sm" 
                           style={{ 
-                            backgroundColor: "#F44336",
+                            backgroundColor: "#E91E63",
                             color: "white",
                             padding: "7px 15px",
                             borderRadius: "6px",
@@ -523,7 +525,7 @@ const InventoryList = () => {
               overflow: "hidden"
             }}>
               <div className="modal-header" style={{ 
-                background: "linear-gradient(135deg, #F44336 0%, #D32F2F 100%)",
+                background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
                 borderBottom: "none",
                 padding: "20px 25px"
               }}>
@@ -548,13 +550,13 @@ const InventoryList = () => {
                     width: "70px",
                     height: "70px",
                     margin: "10px auto 20px",
-                    background: "rgba(244, 67, 54, 0.1)",
+                    background: "rgba(233, 30, 99, 0.1)",
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center"
                   }}>
-                    <FaTrashAlt size={30} style={{ color: "#F44336" }} />
+                    <FaTrashAlt size={30} style={{ color: "#E91E63" }} />
                   </div>
                   <p className="mb-0">Are you sure you want to delete this item?</p>
                   <p className="text-muted" style={{ fontSize: "14px" }}>This action cannot be undone.</p>
@@ -586,7 +588,7 @@ const InventoryList = () => {
                     padding: "10px 18px",
                     fontSize: "14px",
                     fontWeight: "500",
-                    background: "linear-gradient(135deg, #F44336 0%, #D32F2F 100%)",
+                    background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
                     border: "none"
                   }}
                 >
@@ -620,7 +622,7 @@ const InventoryList = () => {
               overflow: "hidden"
             }}>
               <div className="modal-header" style={{ 
-                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
                 borderBottom: "none",
                 padding: "20px 25px"
               }}>
@@ -708,9 +710,7 @@ const InventoryList = () => {
                         <option value="kg">kg</option>
                         <option value="liters">liters</option>
                         <option value="pieces">pieces</option>
-                        <option value="boxes">boxes</option>
-                        <option value="grams">grams</option>
-                        <option value="units">units</option>
+                        
                       </select>
                     </div>
                   </div>
@@ -775,9 +775,9 @@ const InventoryList = () => {
                         padding: "12px",
                         fontSize: "16px",
                         fontWeight: "600",
-                        background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                        background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
                         border: "none",
-                        boxShadow: "0 4px 10px rgba(76, 175, 80, 0.3)",
+                        boxShadow: "0 4px 10px rgba(0, 188, 212, 0.3)",
                       }}
                     >
                       Update Item
@@ -799,8 +799,8 @@ const InventoryList = () => {
           }
           
           .form-control:focus, .form-select:focus {
-            border-color: #4CAF50 !important;
-            box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25) !important;
+            border-color: #00BCD4 !important;
+            box-shadow: 0 0 0 0.25rem rgba(0, 188, 212, 0.25) !important;
           }
           
           .btn:hover {

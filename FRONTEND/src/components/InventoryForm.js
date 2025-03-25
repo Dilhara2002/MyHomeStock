@@ -13,8 +13,57 @@ const InventoryForm = () => {
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
   const navigate = useNavigate();
   const { id } = useParams();
+
+  // Validation rules
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // Name validation
+    if (!name.trim()) {
+      errors.name = "Item name is required";
+      isValid = false;
+    } else if (name.length > 50) {
+      errors.name = "Item name must be less than 50 characters";
+      isValid = false;
+    }
+
+    // Quantity validation
+    if (!quantity) {
+      errors.quantity = "Quantity is required";
+      isValid = false;
+    } else if (isNaN(quantity) || parseFloat(quantity) <= 0) {
+      errors.quantity = "Quantity must be a positive number";
+      isValid = false;
+    } else if (parseFloat(quantity) > 10000) {
+      errors.quantity = "Quantity must be less than 10,000";
+      isValid = false;
+    }
+
+    // Expiry date validation
+    if (expiryDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(expiryDate);
+      
+      if (selectedDate < today) {
+        errors.expiryDate = "Expiry date cannot be in the past";
+        isValid = false;
+      }
+    }
+
+    // Category validation
+    if (!category) {
+      errors.category = "Please select a category";
+      isValid = false;
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
 
   // Fetch categories
   useEffect(() => {
@@ -61,6 +110,12 @@ const InventoryForm = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+
     const item = { name, quantity, unit, expiryDate, category };
 
     try {
@@ -76,14 +131,43 @@ const InventoryForm = () => {
       }
       setShowSuccessModal(true);
     } catch (error) {
-      setError("Error saving item");
+      setError("Error saving item: " + (error.response?.data?.message || error.message));
     }
   };
 
   // Close success modal and redirect
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    navigate("/dashboard");
+    navigate("/Inventory");
+  };
+
+  // Handle input changes with validation
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+    if (validationErrors.name) {
+      setValidationErrors({...validationErrors, name: ""});
+    }
+  };
+
+  const handleQuantityChange = (e) => {
+    setQuantity(e.target.value);
+    if (validationErrors.quantity) {
+      setValidationErrors({...validationErrors, quantity: ""});
+    }
+  };
+
+  const handleExpiryDateChange = (e) => {
+    setExpiryDate(e.target.value);
+    if (validationErrors.expiryDate) {
+      setValidationErrors({...validationErrors, expiryDate: ""});
+    }
+  };
+
+  const handleCategoryChange = (e) => {
+    setCategory(e.target.value);
+    if (validationErrors.category) {
+      setValidationErrors({...validationErrors, category: ""});
+    }
   };
 
   return (
@@ -100,7 +184,7 @@ const InventoryForm = () => {
         overflow: "hidden"
       }}>
         <div className="card-header" style={{
-          background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+          background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
           color: "white",
           border: "none",
           padding: "20px",
@@ -128,7 +212,7 @@ const InventoryForm = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-3">
+          <form onSubmit={handleSubmit} className="mt-3" noValidate>
             <div className="mb-4">
               <label className="form-label" style={{ 
                 color: "#2c3e50", 
@@ -136,14 +220,14 @@ const InventoryForm = () => {
                 fontSize: "16px",
                 marginBottom: "8px"
               }}>
-                <FaBoxOpen className="me-2" style={{ color: "#4CAF50" }} />
+                <FaBoxOpen className="me-2" style={{ color: "#00BCD4" }} />
                 Item Name
               </label>
               <input
                 type="text"
-                className="form-control form-control-lg"
+                className={`form-control form-control-lg ${validationErrors.name ? "is-invalid" : ""}`}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
                 required
                 placeholder="Enter item name"
                 style={{ 
@@ -155,6 +239,11 @@ const InventoryForm = () => {
                   boxShadow: "none"
                 }}
               />
+              {validationErrors.name && (
+                <div className="invalid-feedback d-block">
+                  {validationErrors.name}
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -164,17 +253,19 @@ const InventoryForm = () => {
                 fontSize: "16px",
                 marginBottom: "8px"
               }}>
-                <i className="fas fa-weight me-2" style={{ color: "#4CAF50" }}></i>
+                <i className="fas fa-weight me-2" style={{ color: "#00BCD4" }}></i>
                 Quantity
               </label>
               <div className="d-flex">
                 <input
                   type="number"
-                  className="form-control form-control-lg"
+                  className={`form-control form-control-lg ${validationErrors.quantity ? "is-invalid" : ""}`}
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
+                  onChange={handleQuantityChange}
                   required
                   placeholder="Enter quantity"
+                  min="0.01"
+                  step="0.01"
                   style={{ 
                     borderRadius: "10px 0 0 10px", 
                     border: "2px solid #e0e0e0", 
@@ -205,11 +296,14 @@ const InventoryForm = () => {
                   <option value="kg">kg</option>
                   <option value="liters">liters</option>
                   <option value="pieces">pieces</option>
-                  <option value="boxes">boxes</option>
-                  <option value="grams">grams</option>
-                  <option value="units">units</option>
+                 
                 </select>
               </div>
+              {validationErrors.quantity && (
+                <div className="invalid-feedback d-block">
+                  {validationErrors.quantity}
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -219,14 +313,15 @@ const InventoryForm = () => {
                 fontSize: "16px",
                 marginBottom: "8px"
               }}>
-                <FaCalendarAlt className="me-2" style={{ color: "#4CAF50" }} />
+                <FaCalendarAlt className="me-2" style={{ color: "#00BCD4" }} />
                 Expiry Date
               </label>
               <input
                 type="date"
-                className="form-control form-control-lg"
+                className={`form-control form-control-lg ${validationErrors.expiryDate ? "is-invalid" : ""}`}
                 value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
+                onChange={handleExpiryDateChange}
+                min={new Date().toISOString().split('T')[0]} // Set min date to today
                 style={{ 
                   borderRadius: "10px", 
                   border: "2px solid #e0e0e0", 
@@ -236,6 +331,11 @@ const InventoryForm = () => {
                   boxShadow: "none"
                 }}
               />
+              {validationErrors.expiryDate && (
+                <div className="invalid-feedback d-block">
+                  {validationErrors.expiryDate}
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -245,13 +345,14 @@ const InventoryForm = () => {
                 fontSize: "16px",
                 marginBottom: "8px"
               }}>
-                <FaListAlt className="me-2" style={{ color: "#4CAF50" }} />
+                <FaListAlt className="me-2" style={{ color: "#00BCD4" }} />
                 Category
               </label>
               <select
-                className="form-select form-select-lg"
+                className={`form-select form-select-lg ${validationErrors.category ? "is-invalid" : ""}`}
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={handleCategoryChange}
+                required
                 style={{ 
                   borderRadius: "10px", 
                   border: "2px solid #e0e0e0", 
@@ -268,6 +369,11 @@ const InventoryForm = () => {
                   </option>
                 ))}
               </select>
+              {validationErrors.category && (
+                <div className="invalid-feedback d-block">
+                  {validationErrors.category}
+                </div>
+              )}
             </div>
 
             <button
@@ -279,8 +385,8 @@ const InventoryForm = () => {
                 borderRadius: "10px", 
                 border: "none",
                 fontWeight: "600",
-                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
-                boxShadow: "0 4px 15px rgba(76, 175, 80, 0.3)",
+                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
+                boxShadow: "0 4px 15px rgba(0, 188, 212, 0.3)",
                 transition: "all 0.3s ease"
               }}
             >
@@ -312,7 +418,7 @@ const InventoryForm = () => {
               overflow: "hidden"
             }}>
               <div className="modal-header" style={{ 
-                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
                 borderBottom: "none",
                 padding: "20px 25px"
               }}>
@@ -339,7 +445,7 @@ const InventoryForm = () => {
                   alignItems: "center",
                   justifyContent: "center"
                 }}>
-                  <FaCheckCircle size={45} style={{ color: "#4CAF50" }} />
+                  <FaCheckCircle size={45} style={{ color: "#00BCD4" }} />
                 </div>
                 <h4 style={{ 
                   fontWeight: "600", 
@@ -369,8 +475,8 @@ const InventoryForm = () => {
                     borderRadius: "10px", 
                     border: "none", 
                     padding: "12px 30px",
-                    background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
-                    boxShadow: "0 4px 15px rgba(76, 175, 80, 0.3)",
+                    background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
+                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.3)",
                     fontWeight: "600",
                     fontSize: "16px",
                     width: "90%",
@@ -394,13 +500,23 @@ const InventoryForm = () => {
           }
           
           .form-control:focus, .form-select:focus {
-            border-color: #4CAF50 !important;
-            box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25) !important;
+            border-color: #00BCD4 !important;
+            box-shadow: 0 0 0 0.25rem rgba(0, 188, 212, 0.25) !important;
           }
           
           .btn-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4) !important;
+            box-shadow: 0 6px 20px rgba(0, 188, 212, 0.4) !important;
+          }
+
+          .is-invalid {
+            border-color: #dc3545 !important;
+          }
+
+          .invalid-feedback {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
           }
         `}
       </style>

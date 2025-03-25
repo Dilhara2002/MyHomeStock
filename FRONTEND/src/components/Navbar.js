@@ -3,49 +3,101 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import axios from "axios";
 import { ShoppingCart, User, LogOut, Settings, Bell } from "lucide-react";
+import logo from './logo.png';
 
 const Navbar = () => {
-  const [profilePicture, setProfilePicture] = useState("");
-  const [username, setUsername] = useState("");
+  const [userData, setUserData] = useState({
+    profilePicture: "",
+    username: "",
+    role: "",
+    notifications: 0
+  });
   const [showDropdown, setShowDropdown] = useState(false);
-  const [notifications, setNotifications] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
 
-  // Fetch user profile data on component mount
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        
-        const response = await axios.get("http://localhost:5002/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  // Enhanced auth check with role verification
+  const checkAuthAndFetchProfile = async () => {
+    const token = localStorage.getItem("token");
+    const authStatus = !!token;
+    setIsAuthenticated(authStatus);
+    
+    if (!authStatus) {
+      setUserData({
+        profilePicture: "",
+        username: "",
+        role: "",
+        notifications: 0
+      });
+      return;
+    }
 
-        if (response.data.profilePicture) {
-          setProfilePicture(response.data.profilePicture);
-        }
-        if (response.data.username) {
-          setUsername(response.data.username);
-        }
-        
-        // Mock notification count (replace with actual API call if available)
-        setNotifications(3);
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-        if (error.response && error.response.status === 401) {
-          // Token expired or invalid
-          handleLogout();
-        }
+    try {
+      const response = await axios.get("http://localhost:5002/users/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Verify the response contains role information
+      if (!response.data.role) {
+        console.warn("Role not found in profile response");
       }
-    };
 
-    fetchProfile();
+      setUserData({
+        profilePicture: response.data.profilePicture || "",
+        username: response.data.username || "",
+        role: response.data.role || "user", // Default to 'user' if role not specified
+        notifications: response.data.notifications || 0
+      });
+
+      // Store user data in localStorage for persistence
+      localStorage.setItem("userData", JSON.stringify({
+        username: response.data.username,
+        role: response.data.role,
+        profilePicture: response.data.profilePicture
+      }));
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
+    }
+  };
+
+  // Initial setup with localStorage check
+  useEffect(() => {
+    // First check localStorage for existing data
+    const storedUserData = localStorage.getItem("userData");
+    if (storedUserData) {
+      try {
+        const parsedData = JSON.parse(storedUserData);
+        setUserData(prev => ({
+          ...prev,
+          username: parsedData.username || "",
+          role: parsedData.role || "user",
+          profilePicture: parsedData.profilePicture || ""
+        }));
+      } catch (e) {
+        console.error("Error parsing stored user data:", e);
+      }
+    }
+
+    // Then verify with server
+    checkAuthAndFetchProfile();
+
+    // Event listeners for auth changes
+    const handleAuthChange = () => checkAuthAndFetchProfile();
+    window.addEventListener("authChange", handleAuthChange);
+    window.addEventListener("storage", handleAuthChange);
+    
+    return () => {
+      window.removeEventListener("authChange", handleAuthChange);
+      window.removeEventListener("storage", handleAuthChange);
+    };
   }, []);
-  
-  // Close dropdown when clicking outside
+
+  // Click outside dropdown handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -54,37 +106,56 @@ const Navbar = () => {
     };
     
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("userData");
+    setIsAuthenticated(false);
+    setUserData({
+      profilePicture: "",
+      username: "",
+      role: "",
+      notifications: 0
+    });
     navigate("/login");
+    window.dispatchEvent(new Event("authChange"));
   };
-  
-  // Check if route is active
-  const isActive = (path) => {
-    return location.pathname === path;
+
+  const isActive = (path) => location.pathname === path;
+
+  // Role-based menu items
+  const renderAdminMenu = () => {
+    if (userData.role === 'admin') {
+      return (
+        <li className="nav-item">
+          <Link 
+            to="/analytics" 
+            className={`nav-link ${isActive('/analytics') ? 'active' : ''}`}
+          >
+            <i className="bi bi-graph-up me-1"></i> Analytics
+          </Link>
+        </li>
+      );
+    }
+    return null;
   };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
       <div className="container">
-        {/* Logo */}
         <Link to="/" className="navbar-brand d-flex align-items-center">
           <img 
-            src="/api/placeholder/30/30" 
-            alt="HomeStock Logo" 
+            src={logo} 
+            alt="Logo" 
             className="me-2" 
-            style={{ width: "30px", height: "30px" }} 
+            style={{ width: "30px", height: "30px" }}
+            onError={(e) => e.target.src = "https://via.placeholder.com/30"} 
           />
           <span className="fw-bold">HomeStock</span>
         </Link>
 
-        {/* Navbar Toggler for Mobile */}
         <button
           className="navbar-toggler"
           type="button"
@@ -97,111 +168,112 @@ const Navbar = () => {
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        {/* Navbar Links */}
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto">
-            <li className="nav-item">
-              <Link 
-                to="/dashboard" 
-                className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-              >
-                <i className="bi bi-grid me-1"></i>
-                Dashboard
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link 
-                to="/inventory" 
-                className={`nav-link ${isActive('/inventory') ? 'active' : ''}`}
-              >
-                <i className="bi bi-box me-1"></i>
-                Inventory
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link 
-                to="/shopping-list" 
-                className={`nav-link ${isActive('/shopping-list') ? 'active' : ''}`}
-              >
-                <ShoppingCart size={16} className="me-1" />
-                Shopping List
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link 
-                to="/analytics" 
-                className={`nav-link ${isActive('/analytics') ? 'active' : ''}`}
-              >
-                <i className="bi bi-graph-up me-1"></i>
-                Analytics
-              </Link>
-            </li>
-          </ul>
-
-          {/* Right Side of Navbar */}
-          <div className="d-flex align-items-center">
-            {/* Notification Bell */}
-            <div className="position-relative me-3">
-              <Link to="/notifications" className="text-light">
-                <Bell size={20} />
-                {notifications > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    {notifications}
-                    <span className="visually-hidden">unread notifications</span>
-                  </span>
-                )}
-              </Link>
-            </div>
-
-            {/* Profile Dropdown */}
-            <div className="dropdown" ref={dropdownRef}>
-              <button
-                className="btn btn-link dropdown-toggle d-flex align-items-center text-decoration-none"
-                type="button"
-                id="profileDropdown"
-                onClick={() => setShowDropdown(!showDropdown)}
-                aria-expanded={showDropdown}
-              >
-                {profilePicture ? (
-                  <img
-                    src={profilePicture}
-                    alt="Profile"
-                    className="rounded-circle me-2"
-                    style={{ width: "32px", height: "32px", objectFit: "cover" }}
-                  />
-                ) : (
-                  <User size={24} className="text-light me-2" />
-                )}
-                <span className="d-none d-md-inline text-light">{username || "User"}</span>
-              </button>
-
-              {/* Dropdown Menu */}
-              {showDropdown && (
-                <div
-                  className="dropdown-menu dropdown-menu-end mt-2 shadow"
-                >
-                  <div className="dropdown-header py-2">
-                    <small className="text-muted">Signed in as</small>
-                    <p className="mb-0 fw-bold">{username || "User"}</p>
-                  </div>
-                  <div className="dropdown-divider"></div>
-                  <Link to="/profile" className="dropdown-item">
-                    <User size={16} className="me-2" />
-                    Profile
+          {isAuthenticated && (
+            <>
+              <ul className="navbar-nav me-auto">
+                <li className="nav-item">
+                  <Link 
+                    to="/dashboard" 
+                    className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+                  >
+                    <i className="bi bi-grid me-1"></i> Dashboard
                   </Link>
-                  <Link to="/settings" className="dropdown-item">
-                    <Settings size={16} className="me-2" />
-                    Settings
+                </li>
+                <li className="nav-item">
+                  <Link 
+                    to="/inventory" 
+                    className={`nav-link ${isActive('/inventory') ? 'active' : ''}`}
+                  >
+                    <i className="bi bi-box me-1"></i> Inventory
                   </Link>
-                  <div className="dropdown-divider"></div>
-                  <button className="dropdown-item text-danger" onClick={handleLogout}>
-                    <LogOut size={16} className="me-2" />
-                    Sign Out
-                  </button>
+                </li>
+                <li className="nav-item">
+                  <Link 
+                    to="/shopping-list" 
+                    className={`nav-link ${isActive('/shopping-list') ? 'active' : ''}`}
+                  >
+                    <ShoppingCart size={16} className="me-1" /> Shopping List
+                  </Link>
+                </li>
+                {renderAdminMenu()}
+              </ul>
+
+              <div className="d-flex align-items-center">
+                <div className="position-relative me-3">
+                  <Link to="/notifications" className="text-light">
+                    <Bell size={20} />
+                    {userData.notifications > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {userData.notifications}
+                      </span>
+                    )}
+                  </Link>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="position-relative" ref={dropdownRef}>
+                  <button
+                    className="btn btn-link d-flex align-items-center text-decoration-none p-0"
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    aria-expanded={showDropdown}
+                  >
+                    {userData.profilePicture ? (
+                      <img
+                        src={userData.profilePicture}
+                        alt="Profile"
+                        className="rounded-circle me-2"
+                        style={{ width: "32px", height: "32px", objectFit: "cover" }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "https://via.placeholder.com/32";
+                        }}
+                      />
+                    ) : (
+                      <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2"
+                          style={{ width: "32px", height: "32px" }}>
+                        <User size={20} className="text-light" />
+                      </div>
+                    )}
+                    <span className="d-none d-md-inline text-light">
+                      {userData.username || userData.role.charAt(0).toUpperCase() + userData.role.slice(1) || "User"}
+                    </span>
+                  </button>
+
+                  {showDropdown && (
+                    <div className="position-absolute end-0 mt-2 bg-white rounded shadow-lg z-3"
+                          style={{ minWidth: "200px" }}>
+                      <div className="p-3 border-bottom">
+                        <small className="text-muted">Signed in as</small>
+                        <p className="mb-0 fw-bold">{userData.username}</p>
+                        <small className="text-muted">Role: {userData.role.charAt(0).toUpperCase() + userData.role.slice(1)}</small>
+                      </div>
+                      <Link 
+                        to="/profile" 
+                        className="d-block px-3 py-2 text-dark text-decoration-none hover-bg-light"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        <User size={16} className="me-2" /> Profile
+                      </Link>
+                      <Link 
+                        to="/settings" 
+                        className="d-block px-3 py-2 text-dark text-decoration-none hover-bg-light"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        <Settings size={16} className="me-2" /> Settings
+                      </Link>
+                      <div className="border-top my-1"></div>
+                      <button 
+                        className="d-block w-100 text-start px-3 py-2 text-danger bg-transparent border-0 hover-bg-light"
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={16} className="me-2" /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </nav>

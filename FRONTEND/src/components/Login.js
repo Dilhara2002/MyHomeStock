@@ -7,10 +7,13 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
       const response = await axios.post("http://localhost:5002/users/login", {
@@ -19,10 +22,20 @@ const Login = () => {
       });
 
       localStorage.setItem("token", response.data.token);
-      navigate("/profile");
+      
+      // Trigger navbar update in two ways:
+      // 1. Dispatch custom event
+      window.dispatchEvent(new CustomEvent("authChange"));
+      
+      // 2. Force refresh (alternative approach)
+      // window.location.reload();
+      
+      navigate("/Home");
     } catch (error) {
-      setError("Invalid credentials");
-      console.error("Login Error:", error); // Debugging
+      setError(error.response?.data?.message || "Invalid credentials");
+      console.error("Login Error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,7 +47,11 @@ const Login = () => {
             <div className="card-body" style={{ padding: "2rem" }}>
               <h2 className="card-title text-center mb-4" style={{ color: "#3a5a97", fontWeight: "600" }}>Login</h2>
               
-              {error && <div className="alert alert-danger">{error}</div>}
+              {error && (
+                <div className="alert alert-danger" style={{ borderRadius: "6px" }}>
+                  {error}
+                </div>
+              )}
               
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
@@ -78,13 +95,31 @@ const Login = () => {
                     fontWeight: "500",
                     fontSize: "1.05rem" 
                   }}
+                  disabled={isLoading}
                 >
-                  Login
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Logging in...
+                    </>
+                  ) : (
+                    "Login"
+                  )}
                 </button>
               </form>
               
               <p className="text-center mt-4" style={{ color: "#6c757d" }}>
-                Don't have an account? <Link to="/signup" style={{ color: "#4a6fdc", textDecoration: "none", fontWeight: "500" }}>Sign up</Link>
+                Don't have an account?{" "}
+                <Link 
+                  to="/signup" 
+                  style={{ 
+                    color: "#4a6fdc", 
+                    textDecoration: "none", 
+                    fontWeight: "500" 
+                  }}
+                >
+                  Sign up
+                </Link>
               </p>
             </div>
           </div>
