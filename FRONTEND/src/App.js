@@ -14,7 +14,7 @@ import HomePage from "./pages/Home";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard"; 
  import CategoryPage from "./components/AddCategory";
-import Category from "./pages/Category";
+
 
 const App = () => {
   const isAuthenticated = !!localStorage.getItem("token");
