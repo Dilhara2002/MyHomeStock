@@ -13,6 +13,8 @@ import InventoryForm from "./components/InventoryForm";
 import HomePage from "./pages/Home";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard"; 
+ import CategoryPage from "./components/AddCategory";
+import Category from "./pages/Category";
 
 const App = () => {
   const isAuthenticated = !!localStorage.getItem("token");
@@ -34,6 +36,8 @@ const App = () => {
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
           <Route path="/inventory/:action/:id?" element={isAuthenticated ? <InventoryForm /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
+          <Route path="/CategoryPage" element={isAuthenticated ? <CategoryPage /> : <Navigate to="/login" />} />
+          
 
           {/* Admin-only route */}
           <Route

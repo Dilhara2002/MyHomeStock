@@ -2,6 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShoppingCart, ListChecks, Bell, User, BarChart3, Settings, Info, MessageCircle } from "lucide-react";
+import { Layers } from "lucide-react";
+
+
 
 // Import Bootstrap CSS (you'll need to install bootstrap: npm install bootstrap)
 // Add this to your main index.js or App.js: import 'bootstrap/dist/css/bootstrap.min.css';
@@ -50,7 +53,7 @@ const Home = () => {
             { icon: <ListChecks size={50} />, title: 'Smart Shopping List', desc: 'Get AI-suggested shopping lists based on usage patterns.', link: '/shopping-list', bg: '#2ecc71', hover: '#27ae60' },
             { icon: <Bell size={50} />, title: 'Expiry Reminders', desc: 'Receive alerts before items expire.', link: '/reminders', bg: '#e74c3c', hover: '#c0392b' },
             { icon: <User size={50} />, title: 'User Management', desc: 'Manage account settings and team members.', link: '/profile', bg: '#9b59b6', hover: '#8e44ad' },
-            { icon: <BarChart3 size={50} />, title: 'Analytics', desc: 'Track your consumption trends and inventory statistics.', link: '/analytics', bg: '#f1c40f', hover: '#f39c12' },
+            { icon: <Layers size={50} />, title: 'Category', desc: 'Manage and analyze your inventory by category.', link: '/CategoryPage', bg: '#f1c40f', hover: '#f39c12' },
             { icon: <Settings size={50} />, title: 'Settings', desc: 'Customize your preferences and app settings.', link: '/settings', bg: '#7f8c8d', hover: '#95a5a6' },
             { icon: <Info size={50} />, title: 'About Us', desc: 'Learn more about HomeStock and its features.', link: '/about', bg: '#2980b9', hover: '#3498db' },
             { icon: <MessageCircle size={50} />, title: 'Support', desc: 'Need help? Contact our support team.', link: '/support', bg: '#16a085', hover: '#1abc9c' },

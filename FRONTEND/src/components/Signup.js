@@ -24,7 +24,7 @@ const Signup = () => {
       localStorage.setItem("token", response.data.token);
 
       // Redirect to dashboard
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error) {
       setError("Error creating account");
     }
