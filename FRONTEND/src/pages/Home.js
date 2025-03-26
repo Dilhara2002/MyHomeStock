@@ -1,10 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ShoppingCart, ListChecks, Bell, User, BarChart3, Settings, Info, MessageCircle } from "lucide-react";
-
-// Import Bootstrap CSS (you'll need to install bootstrap: npm install bootstrap)
-// Add this to your main index.js or App.js: import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Home = () => {
   return (
@@ -17,10 +12,11 @@ const Home = () => {
       <div className="container">
         <div className="row justify-content-center text-center">
           <div className="col-lg-8">
-            <motion.div
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+            <div
+              style={{ 
+                opacity: 1,
+                transform: 'translateY(0)'
+              }}
             >
               <h1 style={{ 
                 fontSize: '3.5rem', 
@@ -40,7 +36,7 @@ const Home = () => {
               }}>
                 Your smart home inventory management system. Keep track of your groceries, household essentials, and get AI-powered expiry reminders effortlessly.
               </p>
-            </motion.div>
+            </div>
           </div>
         </div>
 
@@ -50,22 +46,14 @@ const Home = () => {
             { icon: <ListChecks size={50} />, title: 'Smart Shopping List', desc: 'Get AI-suggested shopping lists based on usage patterns.', link: '/shopping-list', bg: '#2ecc71', hover: '#27ae60' },
             { icon: <Bell size={50} />, title: 'Expiry Reminders', desc: 'Receive alerts before items expire.', link: '/reminders', bg: '#e74c3c', hover: '#c0392b' },
             { icon: <User size={50} />, title: 'User Management', desc: 'Manage account settings and team members.', link: '/profile', bg: '#9b59b6', hover: '#8e44ad' },
-            { icon: <BarChart3 size={50} />, title: 'Analytics', desc: 'Track your consumption trends and inventory statistics.', link: '/analytics', bg: '#f1c40f', hover: '#f39c12' },
+            { icon: <BarChart3 size={50} />, title: 'Category', desc: 'Manage and analyze your inventory by category.', link: '/AddCategory', bg: '#f1c40f', hover: '#f39c12' },
             { icon: <Settings size={50} />, title: 'Settings', desc: 'Customize your preferences and app settings.', link: '/settings', bg: '#7f8c8d', hover: '#95a5a6' },
             { icon: <Info size={50} />, title: 'About Us', desc: 'Learn more about HomeStock and its features.', link: '/about', bg: '#2980b9', hover: '#3498db' },
             { icon: <MessageCircle size={50} />, title: 'Support', desc: 'Need help? Contact our support team.', link: '/support', bg: '#16a085', hover: '#1abc9c' },
           ].map((item, index) => (
             <div className="col-sm-6 col-lg-3" key={index}>
-              <motion.div 
+              <div 
                 className="card h-100 border-0" 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                whileHover={{ 
-                  y: -10,
-                  boxShadow: '0 15px 30px rgba(0,0,0,0.15)',
-                  transition: { duration: 0.3 }
-                }}
                 style={{ 
                   borderRadius: '16px',
                   overflow: 'hidden',
@@ -89,8 +77,8 @@ const Home = () => {
                   </div>
                   <h4 className="card-title fw-bold" style={{ fontSize: '1.3rem', color: '#2c3e50' }}>{item.title}</h4>
                   <p className="card-text" style={{ color: '#7f8c8d', marginBottom: '20px' }}>{item.desc}</p>
-                  <Link 
-                    to={item.link} 
+                  <a 
+                    href={item.link} 
                     className="btn text-white w-100"
                     style={{ 
                       backgroundColor: item.bg, 
@@ -100,13 +88,11 @@ const Home = () => {
                       transition: 'all 0.3s ease',
                       boxShadow: `0 4px 15px ${item.bg}80`
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = item.hover}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = item.bg}
                   >
                     Explore
-                  </Link>
+                  </a>
                 </div>
-              </motion.div>
+              </div>
             </div>
           ))}
         </div>
@@ -124,8 +110,8 @@ const Home = () => {
               <p style={{ color: '#7f8c8d', marginBottom: '25px' }}>
                 Join thousands of households that use HomeStock to simplify their inventory management and reduce food waste.
               </p>
-              <Link 
-                to="/signup" 
+              <a 
+                href="/signup" 
                 className="btn btn-lg"
                 style={{ 
                   background: 'linear-gradient(to right, #3498db, #9b59b6)',
@@ -137,7 +123,7 @@ const Home = () => {
                 }}
               >
                 Sign Up for Free
-              </Link>
+              </a>
             </div>
           </div>
         </div>
