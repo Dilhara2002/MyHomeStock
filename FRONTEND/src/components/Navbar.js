@@ -190,8 +190,8 @@ const Navbar = () => {
                 </li>
                 <li className="nav-item">
                   <Link 
-                    to="/shopping-list" 
-                    className={`nav-link ${isActive('/shopping-list') ? 'active' : ''}`}
+                    to="/ShoppingList" 
+                    className={`nav-link ${isActive('/ShoppingList') ? 'active' : ''}`}
                   >
                     <ShoppingCart size={16} className="me-1" /> Shopping List
                   </Link>

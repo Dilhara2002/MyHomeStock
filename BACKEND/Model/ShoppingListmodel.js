@@ -1,27 +1,22 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-// Define the schema for the Shopping List
 const shoppingListSchema = new mongoose.Schema(
   {
-    itemId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Inventory',  // Reference to the Inventory model
-      required: true,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User", 
+      required: true 
     },
-    name: {
-      type: String,
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,  // Quantity should be at least 1
-    },
+    items: [
+      {
+        name: { type: String, required: true },
+        quantity: { type: Number, required: true }
+      }
+    ]
   },
-  { timestamps: true }  // Automatically manage createdAt and updatedAt
+  {
+    timestamps: true // Automatically adds createdAt and updatedAt fields
+  }
 );
 
-// Create the ShoppingList model
-const ShoppingList = mongoose.model('ShoppingList', shoppingListSchema);
-
-module.exports = ShoppingList;
+export default mongoose.model("ShoppingList", shoppingListSchema);

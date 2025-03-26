@@ -14,6 +14,7 @@ import HomePage from "./pages/Home";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard"; 
  import CategoryPage from "./components/AddCategory";
+ import ShoppingList from "./components/ShoppingList";
 
 
 const App = () => {
@@ -37,6 +38,7 @@ const App = () => {
           <Route path="/inventory/:action/:id?" element={isAuthenticated ? <InventoryForm /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
           <Route path="/CategoryPage" element={isAuthenticated ? <CategoryPage /> : <Navigate to="/login" />} />
+          <Route path="/ShoppingList" element={isAuthenticated ? <ShoppingList /> : <Navigate to="/login" />} />
           
 
           {/* Admin-only route */}

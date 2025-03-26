@@ -1,18 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const ShoppingListController = require('../controllers/ShoppingListController');
+import express from "express";
+import { fetchShoppingList, addToShoppingList, removeFromShoppingList } from "../Controller/ShoppingListController.js";
 
-// Route to fetch all shopping list items
-router.get('/', ShoppingListController.getAllItems);
+const router = express.Router();
+
+// Route to fetch shopping list for a specific user
+router.get("/shopping-list/:userId", fetchShoppingList);
 
 // Route to add an item to the shopping list
-router.post('/', ShoppingListController.addItem);
+router.post("/shopping-list/add", addToShoppingList);
 
-// Route to update the quantity of an item in the shopping list
-router.put('/:id', ShoppingListController.updateItem);
+// Route to remove an item from the shopping list
+router.delete("/shopping-list/remove/:userId/:itemName", removeFromShoppingList);
 
-// Route to delete an item from the shopping list
-router.delete('/:id', ShoppingListController.deleteItem);
-
-module.exports = router;
-
+export default router;
