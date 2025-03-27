@@ -1,18 +1,35 @@
-const express = require('express');
+import express from "express";
+import {
+  getShoppingList,
+  addToShoppingList,
+  purchaseItem,
+  toggleAutoReplenish,
+  createManualItem,
+  updateShoppingListItem,
+  clearPurchasedItems
+} from "../controllers/ShoppingListController.js";
+
 const router = express.Router();
-const ShoppingListController = require('../controllers/ShoppingListController');
 
-// Route to fetch all shopping list items
-router.get('/', ShoppingListController.getAllItems);
+// GET all shopping list items (auto-generated + manual)
+router.get("/", getShoppingList);
 
-// Route to add an item to the shopping list
-router.post('/', ShoppingListController.addItem);
+// POST add inventory item to shopping list (by ID)
+router.post("/add-from-inventory/:inventoryId", addToShoppingList);
 
-// Route to update the quantity of an item in the shopping list
-router.put('/:id', ShoppingListController.updateItem);
+// POST create a manual shopping list item (not in inventory)
+router.post("/manual", createManualItem);
 
-// Route to delete an item from the shopping list
-router.delete('/:id', ShoppingListController.deleteItem);
+// PATCH update shopping list item (quantity, notes, etc.)
+router.patch("/:itemId", updateShoppingListItem);
 
-module.exports = router;
+// POST mark item as purchased (updates inventory if linked)
+router.post("/purchase/:itemId", purchaseItem);
 
+// DELETE clear all purchased items
+router.delete("/clear-completed", clearPurchasedItems);
+
+// POST toggle auto-replenish for an inventory item
+router.post("/toggle-auto/:inventoryId", toggleAutoReplenish);
+
+export default router;

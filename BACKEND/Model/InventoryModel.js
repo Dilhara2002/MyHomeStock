@@ -6,6 +6,7 @@ const inventorySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      unique: true,  // Ensure inventory items have unique names
     },
     quantity: {
       type: Number,
@@ -27,6 +28,24 @@ const inventorySchema = new mongoose.Schema(
       required: false,
       trim: true,
     },
+    // New fields for shopping list integration
+    threshold: {
+      type: Number,
+      required: false,
+      default: 5, // Default low-stock threshold
+      min: 1
+    },
+    isAutoAdded: {
+      type: Boolean,
+      default: false // Track if automatically added to shopping list
+    },
+    purchaseFrequency: {
+      type: Number,
+      default: 0 // Track how often this item is purchased
+    },
+    lastPurchased: {
+      type: Date // Track when this item was last purchased
+    }
   },
   {
     timestamps: true,
