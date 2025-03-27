@@ -6,6 +6,8 @@ import CategoryRoute from './Route/CategoryRoute.js';  // Ensure correct import 
 import InventoryRoute from "./Route/InventoryRoute.js"; // Import inventory routes
 import UserRoute from "./Route/UserRoute.js"; 
 import adminRoutes from "./Route/adminRoutes.js";
+import shoppingListRoutes from "./Route/ShoppingListroute.js";
+
 
 // Load environment variables from .env file
 dotenv.config();
@@ -31,7 +33,7 @@ app.use('/', CategoryRoute);  // Ensure the route paths are handled correctly
 app.use("/inventory", InventoryRoute); // Handling inventory routes
 app.use("/users", UserRoute); 
 app.use("/admin", adminRoutes);
-
+app.use("/shopping-list", shoppingListRoutes);
 
 // Start the server
 const port = process.env.PORT || 5002;

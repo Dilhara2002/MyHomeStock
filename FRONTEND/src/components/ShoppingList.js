@@ -1,208 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 const ShoppingList = () => {
-  const [items, setItems] = useState([]);
-  const [inventory, setInventory] = useState([]);
-  const [newItem, setNewItem] = useState({
-    name: '',
-    quantity: 1,
-    unit: 'pieces',
-    isManual: true
-  });
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [shoppingList, setShoppingList] = useState({ items: [] });
+  const [selectedItem, setSelectedItem] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // API endpoints
-  const API_URL = '/api/shopping-list';
-  const INVENTORY_URL = '/api/inventory';
-
-  // Styles
-  const styles = {
-    container: {
-      maxWidth: '800px',
-      margin: '0 auto',
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif'
-    },
-    addForm: {
-      display: 'flex',
-      gap: '10px',
-      marginBottom: '20px',
-      flexWrap: 'wrap'
-    },
-    input: {
-      padding: '8px',
-      border: '1px solid #ddd',
-      borderRadius: '4px'
-    },
-    button: {
-      padding: '8px 16px',
-      backgroundColor: '#4CAF50',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer'
-    },
-    list: {
-      listStyle: 'none',
-      padding: '0'
-    },
-    listItem: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '10px',
-      borderBottom: '1px solid #eee'
-    },
-    purchasedItem: {
-      textDecoration: 'line-through',
-      color: '#888'
-    },
-    autoBadge: {
-      background: '#e3f2fd',
-      color: '#1976d2',
-      padding: '2px 6px',
-      borderRadius: '10px',
-      fontSize: '0.8em',
-      marginLeft: '8px'
-    },
-    inventorySection: {
-      marginTop: '40px',
-      paddingTop: '20px',
-      borderTop: '2px solid #eee'
-    }
-  };
-
-  // Fetch data on mount
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       try {
-        const [listResponse, inventoryResponse] = await Promise.all([
-          axios.get(API_URL),
-          axios.get(INVENTORY_URL)
-        ]);
-        setItems(listResponse.data);
-        setInventory(inventoryResponse.data);
+        setLoading(true);
+        
+        // Fetch inventory items
+        const inventoryResponse = await axios.get("http://localhost:5002/inventory", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setInventoryItems(inventoryResponse.data);
+
+        // Fetch shopping list
+        const shoppingListResponse = await axios.get(
+          "http://localhost:5002/shopping-list",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setShoppingList(shoppingListResponse.data);
+        
       } catch (error) {
-        console.error("Failed to load data:", error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+        } else {
+          console.error("Error fetching data:", error);
+          setError(error.response?.data?.message || "Error loading data");
+        }
+      } finally {
+        setLoading(false);
       }
     };
-    loadData();
-  }, []);
 
-  const handlePurchase = async (itemId) => {
+    fetchData();
+  }, [navigate]);
+
+  const handleAddToShoppingList = async () => {
+    if (!selectedItem || quantity <= 0) {
+      setError("Please select an item and specify a valid quantity.");
+      return;
+    }
+
     try {
-      await axios.post(`${API_URL}/purchase/${itemId}`);
-      const [listResponse, inventoryResponse] = await Promise.all([
-        axios.get(API_URL),
-        axios.get(INVENTORY_URL)
-      ]);
-      setItems(listResponse.data);
-      setInventory(inventoryResponse.data);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.post(
+        "http://localhost:5002/shopping-list/add",
+        { itemName: selectedItem, quantity },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setShoppingList(response.data.shoppingList);
+      setSelectedItem("");
+      setQuantity(1);
+      setError("");
     } catch (error) {
-      console.error("Purchase failed:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        console.error("Error adding item:", error);
+        setError(error.response?.data?.message || "Error adding item to shopping list");
+      }
     }
   };
 
-  const handleAddManualItem = async () => {
+  const handleDeleteFromShoppingList = async (itemName) => {
     try {
-      await axios.post(`${API_URL}/manual`, newItem);
-      setNewItem({
-        name: '',
-        quantity: 1,
-        unit: 'pieces',
-        isManual: true
-      });
-      const response = await axios.get(API_URL);
-      setItems(response.data);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.delete(
+        `http://localhost:5002/shopping-list/remove/${itemName}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setShoppingList(response.data.shoppingList);
     } catch (error) {
-      console.error("Add item failed:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        console.error("Error deleting item:", error);
+        setError(error.response?.data?.message || "Error deleting item from shopping list");
+      }
     }
   };
 
-  const handleToggleAutoReplenish = async (inventoryId) => {
-    try {
-      await axios.post(`${API_URL}/toggle-auto/${inventoryId}`);
-      const response = await axios.get(INVENTORY_URL);
-      setInventory(response.data);
-    } catch (error) {
-      console.error("Toggle failed:", error);
-    }
-  };
+
+  if (loading) {
+    return (
+      <div className="container mt-5 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.container}>
-      <h2>Shopping List</h2>
-      
-      {/* Add Manual Item Form */}
-      <div style={styles.addForm}>
-        <input
-          type="text"
-          placeholder="Item name"
-          value={newItem.name}
-          onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-          style={styles.input}
-        />
-        <input
-          type="number"
-          min="1"
-          value={newItem.quantity}
-          onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
-          style={styles.input}
-        />
-        <select
-          value={newItem.unit}
-          onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
-          style={styles.input}
-        >
-          <option value="pieces">Pieces</option>
-          <option value="kg">Kilograms</option>
-          <option value="liters">Liters</option>
-        </select>
-        <button onClick={handleAddManualItem} style={styles.button}>
-          Add Item
-        </button>
+    <div className="container mt-5" style={{ maxWidth: "1200px" }}>
+      <h2 className="text-center mb-4 text-primary fw-bold">🛒 Shopping List</h2>
+      {error && (
+        <div className="alert alert-danger alert-dismissible fade show">
+          {error}
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setError("")}
+          ></button>
+        </div>
+      )}
+
+      <div className="mb-4">
+        <h5 className="fw-bold">Add Item to Shopping List</h5>
+        <div className="row">
+          <div className="col-md-6">
+            <label htmlFor="itemDropdown" className="form-label">
+              Select Item
+            </label>
+            <select
+              id="itemDropdown"
+              className="form-select"
+              value={selectedItem}
+              onChange={(e) => setSelectedItem(e.target.value)}
+            >
+              <option value="">Select an Item</option>
+              {inventoryItems.map((item) => (
+                <option key={item._id} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-3">
+            <label htmlFor="quantity" className="form-label">
+              Quantity
+            </label>
+            <input
+              type="number"
+              id="quantity"
+              className="form-control"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              min="1"
+            />
+          </div>
+          <div className="col-md-3 d-flex align-items-end">
+            <button
+              onClick={handleAddToShoppingList}
+              className="btn btn-success w-100"
+              disabled={!selectedItem}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Add to List
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Shopping List Items */}
-      <ul style={styles.list}>
-        {items.map(item => (
-          <li 
-            key={item._id} 
-            style={item.isPurchased ? {...styles.listItem, ...styles.purchasedItem} : styles.listItem}
-          >
-            <span>
-              {item.name} - {item.quantity} {item.unit}
-              {item.isAutoGenerated && <span style={styles.autoBadge}>Auto</span>}
-            </span>
-            {!item.isPurchased && (
-              <button 
-                onClick={() => handlePurchase(item._id)} 
-                style={styles.button}
-              >
-                Mark Purchased
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {/* Inventory Integration */}
-      <div style={styles.inventorySection}>
-        <h3>Add From Inventory</h3>
-        <ul style={styles.list}>
-          {inventory.filter(item => item.quantity <= item.threshold).map(item => (
-            <li key={item._id} style={styles.listItem}>
-              {item.name} (Low Stock: {item.quantity}/{item.threshold})
-              <button 
-                onClick={() => handleToggleAutoReplenish(item._id)}
-                style={styles.button}
-              >
-                {item.isAutoAdded ? 'Disable Auto' : 'Enable Auto'}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <h5 className="fw-bold mb-3">Your Shopping List</h5>
+      {shoppingList.items?.length === 0 ? (
+        <div className="alert alert-info">Your shopping list is empty</div>
+      ) : (
+        <div className="table-responsive">
+          <table className="table table-hover table-bordered shadow-sm rounded">
+            <thead className="bg-primary text-white">
+              <tr>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shoppingList.items?.map((item, index) => (
+                <tr key={index} className="align-middle">
+                  <td>{item.name}</td>
+                  <td>{item.quantity}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDeleteFromShoppingList(item.name)}
+                      className="btn btn-danger btn-sm"
+                    >
+                      <i className="bi bi-trash me-1"></i>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
