@@ -40,7 +40,7 @@ const Home = () => {
             { icon: <ListChecks size={50} />, title: 'Smart Shopping List', desc: 'Auto-suggested lists based on your usage.', link: '/Shoppinglist', bg: '#2ecc71' },
             { icon: <Layers size={50} />, title: 'Category Management', desc: 'Organize inventory by categories.', link: '/CategoryPage', bg: '#f1c40f' },
             { icon: <Bell size={50} />, title: 'Expiry Alerts', desc: 'Get reminders for expiring items.', link: '/reminders', bg: '#e74c3c' },
-            { icon: <User size={50} />, title: 'User Management', desc: 'Manage your account & preferences.', link: '/profile', bg: '#9b59b6' },
+            { icon: <User size={50} />, title: 'User Management', desc: 'Manage your account & preferences.', link: '/AdminDashboard', bg: '#9b59b6' },
             { icon: <BarChart3 size={50} />, title: 'Reports & Insights', desc: 'Analyze stock trends & usage.', link: '/reports', bg: '#16a085' },
             { icon: <Settings size={50} />, title: 'Settings', desc: 'Customize app preferences.', link: '/settings', bg: '#7f8c8d' },
             { icon: <MessageCircle size={50} />, title: 'Support', desc: 'Need help? Contact our team.', link: '/support', bg: '#2980b9' },

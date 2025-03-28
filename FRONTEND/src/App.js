@@ -15,6 +15,9 @@ import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard"; 
  import CategoryPage from "./components/AddCategory";
  import Shoppinglist from "./components/ShoppingList";
+ import Support from "./pages/Support";
+ import Footer from "./pages/Footer";
+
 
 
 const App = () => {
@@ -31,14 +34,15 @@ const App = () => {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-
-          {/* Protected routes */}
           <Route path="/Inventory" element={isAuthenticated ? <InventoryList /> : <Navigate to="/login" />} />
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
           <Route path="/inventory/:action/:id?" element={isAuthenticated ? <InventoryForm /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
           <Route path="/CategoryPage" element={isAuthenticated ? <CategoryPage /> : <Navigate to="/login" />} />
           <Route path="/Shoppinglist" element={isAuthenticated ? <Shoppinglist /> : <Navigate to="/login" />} />
+          <Route path="/AdminDashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
+          <Route path="/Support" element={isAuthenticated ? <Support /> : <Navigate to="/login" />} />
+          
           
 
           {/* Admin-only route */}
@@ -54,6 +58,7 @@ const App = () => {
           
         </Routes>
       </div>
+
     </Router>
   );
 };
