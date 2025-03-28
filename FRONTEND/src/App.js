@@ -42,6 +42,7 @@ const App = () => {
           <Route path="/Shoppinglist" element={isAuthenticated ? <Shoppinglist /> : <Navigate to="/login" />} />
           <Route path="/AdminDashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
           <Route path="/Support" element={isAuthenticated ? <Support /> : <Navigate to="/login" />} />
+          <Route path="/Footer" element={isAuthenticated ? <Footer /> : <Navigate to="/login" />} />
           
           
 
