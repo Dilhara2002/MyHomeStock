@@ -1,10 +1,10 @@
 import Category from "../Model/CategoryModel.js";
 
-// Get all categories
+// all categories
 export const getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find(); // Fetch all categories from the database
-
+  
+    const categories = await Category.find();
     if (!categories || categories.length === 0) {
       return res.status(404).json({ message: "No categories found" });
     }
@@ -16,7 +16,7 @@ export const getAllCategories = async (req, res) => {
   }
 };
 
-// Add a new category
+// Add category
 export const addCategory = async (req, res) => {
   const { name, description } = req.body;
 
@@ -35,11 +35,12 @@ export const addCategory = async (req, res) => {
   }
 };
 
-// Get category by ID
+// category by ID
 export const getCategoryById = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Find by database
     const category = await Category.findById(id);
 
     if (!category) {
@@ -53,7 +54,7 @@ export const getCategoryById = async (req, res) => {
   }
 };
 
-// Update category details
+// Update category 
 export const updateCategory = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
@@ -63,10 +64,11 @@ export const updateCategory = async (req, res) => {
   }
 
   try {
+
     const category = await Category.findByIdAndUpdate(
       id,
       { name, description },
-      { new: true } // Ensures it returns the updated document
+      { new: true }
     );
 
     if (!category) {
