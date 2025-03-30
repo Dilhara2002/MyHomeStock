@@ -182,6 +182,7 @@ const CategoryPage = () => {
 
     if (!validateCategoryName(name)) return;
 
+    //create new
     const newCategory = { name, description };
 
     try {
