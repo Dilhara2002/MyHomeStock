@@ -153,7 +153,7 @@ const Navbar = () => {
             style={{ width: "30px", height: "30px" }}
             onError={(e) => e.target.src = "https://via.placeholder.com/30"} 
           />
-          <span className="fw-bold">HomeStock</span>
+          <span className="fw-bold">MyHomeStock</span>
         </Link>
 
         <button
@@ -190,8 +190,8 @@ const Navbar = () => {
                 </li>
                 <li className="nav-item">
                   <Link 
-                    to="/shopping-list" 
-                    className={`nav-link ${isActive('/shopping-list') ? 'active' : ''}`}
+                    to="/Shoppinglist" 
+                    className={`nav-link ${isActive('/Shoppinglist') ? 'active' : ''}`}
                   >
                     <ShoppingCart size={16} className="me-1" /> Shopping List
                   </Link>

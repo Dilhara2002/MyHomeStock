@@ -20,6 +20,7 @@ export const getAllCategories = async (req, res) => {
 export const addCategory = async (req, res) => {
   const { name, description } = req.body;
 
+  //Add validation
   if (!name || !description) {
     return res.status(400).json({ message: "Name and description are required" });
   }
@@ -58,6 +59,7 @@ export const updateCategory = async (req, res) => {
   const { id } = req.params;
   const { name, description } = req.body;
 
+  //update validation
   if (!name || !description) {
     return res.status(400).json({ message: "Name and description are required" });
   }
@@ -66,7 +68,7 @@ export const updateCategory = async (req, res) => {
     const category = await Category.findByIdAndUpdate(
       id,
       { name, description },
-      { new: true } // Ensures it returns the updated document
+      { new: true } 
     );
 
     if (!category) {

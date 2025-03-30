@@ -59,7 +59,7 @@ const CategoryPage = () => {
     fetchCategories();
   }, [navigate]);
 
-  // Search functionality
+  // Search 
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredCategories(categories);
@@ -90,7 +90,7 @@ const CategoryPage = () => {
     setTimeout(() => setShowMessageModal(false), 5000);
   };
 
-  // Validate category name
+  // category name validate
   const validateCategoryName = (newName) => {
     const isDuplicate = categories.some(
       category => category.name.toLowerCase() === newName.toLowerCase() &&
@@ -143,7 +143,7 @@ const CategoryPage = () => {
     setShowEditModal(true);
   };
 
-  // Handle edit form submission
+  // Handle edit validate
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
@@ -157,6 +157,7 @@ const CategoryPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      //apply new category
       const updatedCategories = categories.map((category) =>
         category._id === categoryToEdit._id ? { ...category, ...updatedCategory } : category
       );
@@ -175,7 +176,7 @@ const CategoryPage = () => {
     }
   };
 
-  // Handle add new category
+  // Handle add validate
   const handleAddCategory = async (e) => {
     e.preventDefault();
 
