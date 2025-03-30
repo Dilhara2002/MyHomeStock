@@ -13,7 +13,7 @@ const Profile = () => {
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  // Custom styles
+  // Custom styles (keeping all styles intact)
   const styles = {
     profileContainer: {
       backgroundColor: "#f8f9fa",
@@ -148,6 +148,7 @@ const Profile = () => {
     }
   };
 
+  /* Commented out account deletion functionality but keeping the styles
   // Handle account deletion
   const handleDeleteAccount = async () => {
     if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
@@ -164,6 +165,7 @@ const Profile = () => {
       }
     }
   };
+  */
 
   // Handle sign out
   const handleSignOut = () => {
@@ -278,13 +280,15 @@ const Profile = () => {
 
                 {/* Account Actions */}
                 <div className="d-grid gap-3">
+                  {/* Keeping the button structure but disabling it */}
                   <button 
-                    onClick={handleDeleteAccount} 
                     className="btn btn-danger" 
                     style={styles.dangerBtn}
+                    disabled
+                    title="Account deletion is currently disabled"
                   >
                     <FontAwesomeIcon icon={faTrash} className="me-2" />
-                    Delete Account
+                    Delete Account (Disabled)
                   </button>
                   
                   <button 
