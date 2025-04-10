@@ -4,17 +4,17 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
 
 // Import components
-import Navbar from "./components/Navbar";
-import Login from "./components/Login";
-import Signup from "./components/Signup";
-import Profile from "./components/Profile";
-import InventoryList from "./components/InventoryList";
-import InventoryForm from "./components/InventoryForm";
+import Navbar from "./Components/Navbar";
+import Login from "./Components/Login";
+import Signup from "./Components/Signup";
+import Profile from "./Components/Profile";
+import InventoryList from "./Components/InventoryList";
+import InventoryForm from "./Components/InventoryForm";
 import HomePage from "./pages/Home";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard"; 
- import CategoryPage from "./components/AddCategory";
- import Shoppinglist from "./components/ShoppingList";
+ import CategoryPage from "./Components/AddCategory";
+ import Shoppinglist from "./Components/ShoppingList";
  import Support from "./pages/Support";
  import Footer from "./pages/Footer";
 
