@@ -9,6 +9,7 @@ import adminRoutes from "./Route/adminRoutes.js";
 import shoppingListRoutes from "./Route/ShoppingListroute.js";
 
 
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -34,7 +35,21 @@ app.use("/inventory", InventoryRoute); // Handling inventory routes
 app.use("/users", UserRoute); 
 app.use("/admin", adminRoutes);
 app.use("/shopping-list", shoppingListRoutes);
+app.use(cors({
+  origin: 'http://localhost:3000', // Your frontend URL
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'multipart/form-data']
+}));
+app.use(express.json({ 
+  limit: '5mb', // For JSON data
+  type: 'application/json' 
+}));
 
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '5mb', // For URL-encoded form data
+  type: 'application/x-www-form-urlencoded' 
+}));
 // Start the server
 const port = process.env.PORT || 5002;
 app.listen(port, () => {

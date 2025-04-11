@@ -12,18 +12,32 @@ const Navbar = () => {
     role: "",
     notifications: 0
   });
+  const [profileImageUrl, setProfileImageUrl] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
 
-  // Enhanced auth check with role verification
+  const fetchProfileImage = async (imagePath) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://localhost:5002/users/profile/image`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+      setProfileImageUrl(imageUrl);
+    } catch (error) {
+      console.error("Error loading profile image:", error);
+    }
+  };
+
   const checkAuthAndFetchProfile = async () => {
     const token = localStorage.getItem("token");
     const authStatus = !!token;
     setIsAuthenticated(authStatus);
-    
+
     if (!authStatus) {
       setUserData({
         profilePicture: "",
@@ -31,6 +45,7 @@ const Navbar = () => {
         role: "",
         notifications: 0
       });
+      setProfileImageUrl("");
       return;
     }
 
@@ -39,23 +54,22 @@ const Navbar = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Verify the response contains role information
-      if (!response.data.role) {
-        console.warn("Role not found in profile response");
+      const profilePicturePath = response.data.profilePicture || "";
+      if (profilePicturePath) {
+        fetchProfileImage(profilePicturePath);
       }
 
       setUserData({
-        profilePicture: response.data.profilePicture || "",
+        profilePicture: profilePicturePath,
         username: response.data.username || "",
-        role: response.data.role || "user", // Default to 'user' if role not specified
+        role: response.data.role || "user",
         notifications: response.data.notifications || 0
       });
 
-      // Store user data in localStorage for persistence
       localStorage.setItem("userData", JSON.stringify({
         username: response.data.username,
         role: response.data.role,
-        profilePicture: response.data.profilePicture
+        profilePicture: profilePicturePath
       }));
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -65,9 +79,7 @@ const Navbar = () => {
     }
   };
 
-  // Initial setup with localStorage check
   useEffect(() => {
-    // First check localStorage for existing data
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       try {
@@ -78,33 +90,33 @@ const Navbar = () => {
           role: parsedData.role || "user",
           profilePicture: parsedData.profilePicture || ""
         }));
+
+        if (parsedData.profilePicture) {
+          fetchProfileImage(parsedData.profilePicture);
+        }
       } catch (e) {
         console.error("Error parsing stored user data:", e);
       }
     }
 
-    // Then verify with server
     checkAuthAndFetchProfile();
 
-    // Event listeners for auth changes
     const handleAuthChange = () => checkAuthAndFetchProfile();
     window.addEventListener("authChange", handleAuthChange);
     window.addEventListener("storage", handleAuthChange);
-    
+
     return () => {
       window.removeEventListener("authChange", handleAuthChange);
       window.removeEventListener("storage", handleAuthChange);
     };
   }, []);
 
-  // Click outside dropdown handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     };
-    
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -119,13 +131,13 @@ const Navbar = () => {
       role: "",
       notifications: 0
     });
+    setProfileImageUrl("");
     navigate("/login");
     window.dispatchEvent(new Event("authChange"));
   };
 
   const isActive = (path) => location.pathname === path;
 
-  // Role-based menu items
   const renderAdminMenu = () => {
     if (userData.role === 'admin') {
       return (
@@ -134,7 +146,7 @@ const Navbar = () => {
             to="/admin" 
             className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
           >
-             Admin Dashboard
+            Admin Dashboard
           </Link>
         </li>
       );
@@ -217,9 +229,9 @@ const Navbar = () => {
                     onClick={() => setShowDropdown(!showDropdown)}
                     aria-expanded={showDropdown}
                   >
-                    {userData.profilePicture ? (
+                    {profileImageUrl ? (
                       <img
-                        src={userData.profilePicture}
+                        src={profileImageUrl}
                         alt="Profile"
                         className="rounded-circle me-2"
                         style={{ width: "32px", height: "32px", objectFit: "cover" }}
@@ -230,7 +242,7 @@ const Navbar = () => {
                       />
                     ) : (
                       <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2"
-                          style={{ width: "32px", height: "32px" }}>
+                        style={{ width: "32px", height: "32px" }}>
                         <User size={20} className="text-light" />
                       </div>
                     )}

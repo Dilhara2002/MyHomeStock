@@ -26,8 +26,10 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
     profilePicture: {
-      type: String, // URL to the profile picture
-      default: "default.jpg", // default profile picture
+      type: Buffer, // Store image binary data
+    },
+    profilePictureType: {
+      type: String, // Store MIME type
     },
   },
   {

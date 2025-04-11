@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
 
 // Import components
-import Navbar from "./Components/Navbar";
+
 import Login from "./Components/Login";
 import Signup from "./Components/Signup";
 import Profile from "./Components/Profile";
@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/AdminDashboard";
  import Shoppinglist from "./Components/ShoppingList";
  import Support from "./pages/Support";
  import Footer from "./pages/Footer";
+ import Navbar from './Components/Navbar';
 
 
 
