@@ -34,42 +34,7 @@ export const signup = async (req, res) => {
   }
 };
 
-// Login a user
-// export const login = async (req, res) => {
-//   const { email, password } = req.body;
 
-//   try {
-//     console.log("Login Request:", { email, password }); // Debugging
-
-//     // Check if user exists
-//     const user = await User.findOne({ email });
-//     if (!user) {
-//       console.log("User not found"); // Debugging
-//       return res.status(400).json({ message: "Invalid credentials" });
-//     }
-
-//     console.log("User Found:", user); // Debugging
-
-//     // Check if password matches
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     console.log("Password Match:", isMatch); // Debugging
-
-//     if (!isMatch) {
-//       console.log("Password does not match"); // Debugging
-//       return res.status(400).json({ message: "Invalid credentials" });
-//     }
-
-//     // Generate JWT
-//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-//       expiresIn: "30d",
-//     });
-
-//     res.status(200).json({ token, user });
-//   } catch (error) {
-//     console.error("Login Error:", error); // Debugging
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
 export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -122,17 +87,20 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, profilePicture } = req.body;
+    const updates = { name: req.body.name };
     
+    if (req.file) {
+      updates.profilePicture = req.file.buffer;
+      updates.profilePictureType = req.file.mimetype;
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { name, profilePicture }, // ✅ Update profilePicture
+      updates,
       { new: true }
-    ).select("-password");
+    ).select('-password -profilePicture');
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json(user);
   } catch (error) {
@@ -140,6 +108,19 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+export const getProfilePicture = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || !user.profilePicture) {
+      return res.status(404).json({ message: "No image found" });
+    }
+
+    res.set('Content-Type', user.profilePictureType);
+    res.send(user.profilePicture);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 // Delete user (admin only)
 export const deleteUser = async (req, res) => {

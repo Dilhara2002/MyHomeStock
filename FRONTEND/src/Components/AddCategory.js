@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import {
@@ -11,24 +11,32 @@ import {
   FaExclamationTriangle,
   FaList,
   FaCheckCircle,
-  FaTimesCircle
+  FaTimesCircle,
+  FaSearch,
+  FaFilePdf
 } from "react-icons/fa";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const CategoryPage = () => {
   const [categories, setCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [categoryToEdit, setCategoryToEdit] = useState(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const navigate = useNavigate();
 
   const formRef = useRef(null);
+  const reportRef = useRef(null);
 
   // Fetch categories
   useEffect(() => {
@@ -43,6 +51,7 @@ const CategoryPage = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCategories(response.data.categories);
+        setFilteredCategories(response.data.categories);
       } catch (error) {
         showError("Error fetching categories");
       }
@@ -50,12 +59,26 @@ const CategoryPage = () => {
     fetchCategories();
   }, [navigate]);
 
+  // Search 
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredCategories(categories);
+    } else {
+      const filtered = categories.filter(
+        (category) =>
+          category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (category.description && 
+           category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredCategories(filtered);
+    }
+  }, [searchTerm, categories]);
+
   // Error handling helper
   const showError = (message) => {
     setError(message);
     setIsSuccessMessage(false);
     setShowMessageModal(true);
-    // Auto-hide after 5 seconds
     setTimeout(() => setShowMessageModal(false), 5000);
   };
 
@@ -64,13 +87,11 @@ const CategoryPage = () => {
     setSuccess(message);
     setIsSuccessMessage(true);
     setShowMessageModal(true);
-    // Auto-hide after 5 seconds
     setTimeout(() => setShowMessageModal(false), 5000);
   };
 
-  // Validate category name
+  // category name validate
   const validateCategoryName = (newName) => {
-    // Check if category name already exists (case-insensitive)
     const isDuplicate = categories.some(
       category => category.name.toLowerCase() === newName.toLowerCase() &&
         category._id !== (categoryToEdit ? categoryToEdit._id : null)
@@ -81,7 +102,6 @@ const CategoryPage = () => {
       return false;
     }
 
-    // Additional validation (e.g., minimum length)
     if (newName.trim().length < 2) {
       showError("Category name must be at least 2 characters long.");
       return false;
@@ -104,10 +124,10 @@ const CategoryPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Remove deleted category from list
-      setCategories(categories.filter((category) => category._id !== categoryToDelete));
+      const updatedCategories = categories.filter((category) => category._id !== categoryToDelete);
+      setCategories(updatedCategories);
+      setFilteredCategories(updatedCategories);
 
-      // Close modal and show success message
       setShowDeleteModal(false);
       showSuccess("Category deleted successfully.");
     } catch (error) {
@@ -123,11 +143,10 @@ const CategoryPage = () => {
     setShowEditModal(true);
   };
 
-  // Handle edit form submission
+  // Handle edit validate
   const handleEditSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate category name
     if (!validateCategoryName(name)) return;
 
     const updatedCategory = { name, description };
@@ -138,19 +157,18 @@ const CategoryPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Update the category in the list
-      setCategories(
-        categories.map((category) =>
-          category._id === categoryToEdit._id ? { ...category, ...updatedCategory } : category
-        )
+      //apply new category
+      const updatedCategories = categories.map((category) =>
+        category._id === categoryToEdit._id ? { ...category, ...updatedCategory } : category
       );
+      
+      setCategories(updatedCategories);
+      setFilteredCategories(updatedCategories);
 
-      // Reset edit state and show success message
       setShowEditModal(false);
       setCategoryToEdit(null);
       showSuccess("Category updated successfully.");
 
-      // Reset form
       setName("");
       setDescription("");
     } catch (error) {
@@ -158,13 +176,13 @@ const CategoryPage = () => {
     }
   };
 
-  // Handle add new category
+  // Handle add validate
   const handleAddCategory = async (e) => {
     e.preventDefault();
 
-    // Validate category name
     if (!validateCategoryName(name)) return;
 
+    //create new
     const newCategory = { name, description };
 
     try {
@@ -173,10 +191,10 @@ const CategoryPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Add new category to the list
-      setCategories([...categories, response.data.category]);
+      const updatedCategories = [...categories, response.data.category];
+      setCategories(updatedCategories);
+      setFilteredCategories(updatedCategories);
 
-      // Show success message and reset form
       showSuccess("Category added successfully.");
       setName("");
       setDescription("");
@@ -185,14 +203,57 @@ const CategoryPage = () => {
     }
   };
 
-  return (
+  // Generate PDF Report
+  const generatePDFReport = () => {
+    setIsGeneratingReport(true);
     
+    const currentDate = new Date().toLocaleDateString();
+    const reportElement = reportRef.current;
+    
+    const options = {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      logging: true,
+      letterRendering: true,
+    };
+
+    html2canvas(reportElement, options).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`Categories_Report_${currentDate}.pdf`);
+      setIsGeneratingReport(false);
+    }).catch((error) => {
+      console.error("Error generating PDF:", error);
+      showError("Failed to generate PDF report");
+      setIsGeneratingReport(false);
+    });
+  };
+
+  return (
     <div className="container mt-5" style={{
       maxWidth: "1200px",
       margin: "0 auto",
       fontFamily: "'Poppins', sans-serif",
       animation: "fadeIn 0.5s ease-in-out"
-    }}><br></br>
+    }}>
+      <br />
       <div className="card shadow-lg" style={{
         borderRadius: "15px",
         border: "none",
@@ -214,10 +275,130 @@ const CategoryPage = () => {
               <FaTag className="me-3" />
               Category Management
             </h2>
+            <button
+              onClick={generatePDFReport}
+              disabled={isGeneratingReport}
+              className="btn btn-light"
+              style={{
+                borderRadius: "8px",
+                padding: "10px 15px",
+                fontSize: "14px",
+                fontWeight: "500",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+              }}
+            >
+              <FaFilePdf />
+              {isGeneratingReport ? "Generating..." : "Export PDF"}
+            </button>
+          </div>
+        </div>
+
+        {/* Hidden report content for PDF generation */}
+        <div ref={reportRef} style={{ position: "absolute", left: "-9999px" }}>
+          <div style={{ padding: "20px", fontFamily: "Arial" }}>
+            <h1 style={{ textAlign: "center", color: "#00838F", marginBottom: "20px" }}>
+              Categories Report
+            </h1>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "20px",
+              fontSize: "14px",
+              color: "#555"
+            }}>
+              <div>Generated on: {new Date().toLocaleDateString()}</div>
+              <div>Total Categories: {categories.length}</div>
+            </div>
+            <table style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginBottom: "20px"
+            }}>
+              <thead>
+                <tr style={{
+                  backgroundColor: "#00BCD4",
+                  color: "white",
+                  textAlign: "left"
+                }}>
+                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>No.</th>
+                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>Name</th>
+                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map((category, index) => (
+                  <tr key={category._id} style={{
+                    borderBottom: "1px solid #ddd",
+                    backgroundColor: index % 2 === 0 ? "#f9f9f9" : "white"
+                  }}>
+                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{index + 1}</td>
+                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{category.name}</td>
+                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{category.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{
+              textAlign: "center",
+              marginTop: "30px",
+              fontSize: "12px",
+              color: "#777"
+            }}>
+              This report was generated by the Category Management System
+            </div>
           </div>
         </div>
 
         <div className="card-body p-4">
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="input-group" style={{
+              borderRadius: "8px",
+              overflow: "hidden",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+              
+            }}>
+              <span className="input-group-text" style={{
+                backgroundColor: "white",
+                borderRight: "none",
+                padding: "12px 15px"
+              }}>
+                <FaSearch style={{ color: "#6c757d" }} />
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search categories by name or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  borderLeft: "none",
+                  padding: "12px 15px",
+                  fontSize: "15px",
+                  border: "2px solid #e0e0e0"
+                }}
+              />
+              {searchTerm && (
+                <button
+                  className="btn btn-outline-secondary"
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  style={{
+                    backgroundColor: "white",
+                    borderLeft: "none",
+                    border: "2px solid #e0e0e0",
+                    height: "40px"
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Add Category Form */}
           <div
             className="card mb-4"
@@ -318,8 +499,8 @@ const CategoryPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {categories.length > 0 ? (
-                  categories.map((category) => (
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
                     <tr key={category._id} style={{
                       transition: "background-color 0.2s",
                       borderBottom: "1px solid #e9ecef"
@@ -379,8 +560,17 @@ const CategoryPage = () => {
                 ) : (
                   <tr>
                     <td colSpan="3" className="text-center py-5" style={{ fontSize: "16px", color: "#6c757d" }}>
-                      <FaList size={40} className="d-block mx-auto mb-3 text-muted" />
-                      No categories found. Add a new category.
+                      {searchTerm ? (
+                        <>
+                          <FaSearch size={40} className="d-block mx-auto mb-3 text-muted" />
+                          No categories found matching your search.
+                        </>
+                      ) : (
+                        <>
+                          <FaList size={40} className="d-block mx-auto mb-3 text-muted" />
+                          No categories found. Add a new category.
+                        </>
+                      )}
                     </td>
                   </tr>
                 )}
