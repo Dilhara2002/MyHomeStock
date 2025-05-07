@@ -1,10 +1,27 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import axios from 'axios'; // ✅ Only one import
+import jwt from 'jsonwebtoken';
 
 dotenv.config(); // Load environment variables
 
 const router = express.Router();
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// Update the route to use the middleware
+router.post('/chat', authenticateToken, async (req, res) => {
+  // ... existing code ...
+});
 
 // POST: /chatbot/chat - Handle AI message requests
 router.post('/chat', async (req, res) => {

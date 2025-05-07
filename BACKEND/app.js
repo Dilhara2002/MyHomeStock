@@ -38,9 +38,10 @@ app.use("/shopping-list", shoppingListRoutes);
 app.use("/chatbot", chatbotRoutes); // ✅ Mount chatbot route here
 
 app.use(cors({
-  origin: 'http://localhost:3000', // Your frontend URL
+  origin: 'http://localhost:3000',
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'multipart/form-data']
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ 
   limit: '5mb', // For JSON data

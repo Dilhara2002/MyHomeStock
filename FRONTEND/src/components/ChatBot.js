@@ -16,33 +16,40 @@ function ChatBot() {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    
-    const userMessage = { sender: 'user', text: input };
-    setMessages((prev) => [...prev, userMessage]);
+  
+    // Add user message to chat
+    const userMessage = { text: input, sender: 'user' };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
-    
+  
     try {
-      // Simulating API call
-      setTimeout(() => {
-        const botMessage = { 
-          sender: 'bot', 
-          text: `I received your message: "${input}". This is a demo response.` 
-        };
-        setMessages((prev) => [...prev, botMessage]);
-        setIsTyping(false);
-      }, 1000);
-    } catch (err) {
-      console.error('Error:', err);
-      setTimeout(() => {
-        const errorMessage = { 
-          sender: 'bot', 
-          text: 'Sorry, I encountered an error. Please try again later.',
-          isError: true
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        setIsTyping(false);
-      }, 700);
+      const response = await fetch('http://localhost:5002/chatbot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ message: input })
+      });
+  
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+  
+      const data = await response.json();
+      const botMessage = { text: data.reply, sender: 'bot' };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = { 
+        text: 'Sorry, there was an error processing your request.', 
+        sender: 'bot',
+        isError: true 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
