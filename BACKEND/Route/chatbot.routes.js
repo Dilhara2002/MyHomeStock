@@ -1,50 +1,42 @@
 import express from 'express';
-import axios from 'axios'; // For making HTTP requests
-import dotenv from 'dotenv'; // To use environment variables
+import dotenv from 'dotenv';
+import axios from 'axios'; // ✅ Only one import
 
-dotenv.config(); // Load environment variables from .env
+dotenv.config(); // Load environment variables
 
 const router = express.Router();
 
-// POST request handler for the chatbot interaction
+// POST: /chatbot/chat - Handle AI message requests
 router.post('/chat', async (req, res) => {
-  const { message } = req.body; // Extract the message from the body of the request
+  const { message } = req.body;
 
-  // Log the incoming message for debugging
   console.log('Received message:', message);
 
   try {
-    // Sending the request to the Gemini API
     const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', // Ensure this is the correct endpoint
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
       {
-        contents: [{ parts: [{ text: message }] }] // Format the message as per Gemini's API requirements
+        contents: [{ parts: [{ text: message }] }]
       },
       {
         headers: {
-          'Content-Type': 'application/json', // Specify content type
-          'x-goog-api-key': process.env.GEMINI_API_KEY // Get API key from .env file
+          'Content-Type': 'application/json',
+          'x-goog-api-key': process.env.GEMINI_API_KEY
         }
       }
     );
 
-    // Log the response from Gemini API for debugging
     console.log('Gemini API Response:', response.data);
 
-    // Extract the response from the API (Ensure the structure is correct)
-    const reply = response.data.candidates[0]?.content?.parts[0]?.text;
+    const reply = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!reply) {
       return res.status(500).json({ error: 'No reply received from AI' });
     }
 
-    // Send the AI response back to the client
     res.json({ reply });
   } catch (error) {
-    // Log the error
     console.error('Error with Gemini API request:', error.message);
-    
-    // Send error response
     res.status(500).json({ error: 'AI failed to respond', details: error.message });
   }
 });

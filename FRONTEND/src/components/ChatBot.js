@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 
 function ChatBot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const chatBoxRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -23,12 +23,15 @@ function ChatBot() {
     setIsTyping(true);
     
     try {
-      const res = await axios.post('http://localhost:5002/chatbot/chat', { message: input });
+      // Simulating API call
       setTimeout(() => {
-        const botMessage = { sender: 'bot', text: res.data.reply };
+        const botMessage = { 
+          sender: 'bot', 
+          text: `I received your message: "${input}". This is a demo response.` 
+        };
         setMessages((prev) => [...prev, botMessage]);
         setIsTyping(false);
-      }, 700);
+      }, 1000);
     } catch (err) {
       console.error('Error:', err);
       setTimeout(() => {
@@ -49,45 +52,29 @@ function ChatBot() {
     }
   };
 
+  // Inline styles
   const styles = {
-    // Main container - now with full screen styling
     container: {
-      width: '100%',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
+      width: '800px',
+      height: '600px',
+      margin: '20px auto',
       background: 'linear-gradient(145deg, #f6f6f6, #e6e9ef)',
       fontFamily: 'Arial, sans-serif',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      position: 'relative',
-      overflow: 'hidden'
-    },
-    
-    // Inner frame styling
-    frame: {
-      position: 'absolute',
-      top: '20px',
-      left: '20px',
-      right: '20px',
-      bottom: '20px',
-      backgroundColor: 'white',
       borderRadius: '12px',
       boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+      border: '1px solid rgba(255, 255, 255, 0.3)',
+      overflow: 'hidden',
+      position: 'relative',
       display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
+      flexDirection: 'column'
     },
-    
-    // Header styling
     header: {
       display: 'flex',
       alignItems: 'center',
       padding: '15px 20px',
       borderBottom: '1px solid #e0e0e0',
-      backgroundColor: '#fff',
-      zIndex: 1
+      backgroundColor: '#fff'
     },
-    
     botAvatar: {
       width: '38px',
       height: '38px',
@@ -101,15 +88,17 @@ function ChatBot() {
       fontWeight: 'bold',
       fontSize: '16px'
     },
-    
     headerTitle: {
       flex: 1,
       margin: 0,
       fontSize: '18px',
-      fontWeight: '600',
+      fontWeight: 600,
       color: '#333'
     },
-    
+    statusWrapper: {
+      display: 'flex',
+      alignItems: 'center'
+    },
     statusIndicator: {
       height: '10px',
       width: '10px',
@@ -118,30 +107,50 @@ function ChatBot() {
       display: 'inline-block',
       marginRight: '5px'
     },
-    
-    headerStatus: {
+    statusText: {
       fontSize: '12px',
       color: '#666'
     },
-    
-    // Chat container - now taking most of the space
     chatBox: {
       flex: 1,
       overflowY: 'auto',
       padding: '20px',
-      background: '#fff',
-      scrollBehavior: 'smooth'
+      backgroundColor: '#fff'
     },
-    
-    // Message bubbles styling
+    emptyState: {
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center',
+      padding: '20px'
+    },
+    emptyIcon: {
+      fontSize: '40px',
+      color: '#ddd',
+      marginBottom: '15px'
+    },
+    emptyTitle: {
+      fontSize: '16px',
+      color: '#999',
+      marginBottom: '10px'
+    },
+    emptySubtitle: {
+      fontSize: '14px',
+      color: '#999'
+    },
     messageRow: {
       display: 'flex',
-      flexDirection: 'row',
       marginBottom: '10px',
-      clear: 'both',
       width: '100%'
     },
-    
+    userRow: {
+      justifyContent: 'flex-end'
+    },
+    botRow: {
+      justifyContent: 'flex-start'
+    },
     messageBubble: {
       margin: '4px 0',
       padding: '12px 16px',
@@ -151,54 +160,36 @@ function ChatBot() {
       position: 'relative',
       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
     },
-    
-    userRow: {
-      justifyContent: 'flex-end'
-    },
-    
-    botRow: {
-      justifyContent: 'flex-start'
-    },
-    
-    user: {
+    userMessage: {
       textAlign: 'right',
       color: '#fff',
       backgroundColor: '#2979FF',
-      borderBottomRightRadius: '5px',
-      marginLeft: 'auto'
+      borderBottomRightRadius: '5px'
     },
-    
-    bot: {
+    botMessage: {
       textAlign: 'left',
       color: '#333',
       backgroundColor: '#E8E8E8',
-      borderBottomLeftRadius: '5px',
-      marginRight: 'auto'
+      borderBottomLeftRadius: '5px'
     },
-    
-    botError: {
+    errorMessage: {
       backgroundColor: '#ffebee',
       color: '#c62828'
     },
-    
     messageTime: {
       fontSize: '10px',
       color: '#999',
       marginTop: '5px',
       textAlign: 'right'
     },
-    
-    // Typing indicator
     typingIndicator: {
       display: 'flex',
       padding: '12px 15px',
       backgroundColor: '#E8E8E8',
       width: 'fit-content',
       borderRadius: '18px',
-      marginBottom: '10px',
       alignItems: 'center'
     },
-    
     typingDot: {
       width: '8px',
       height: '8px',
@@ -208,116 +199,87 @@ function ChatBot() {
       display: 'inline-block',
       animation: 'typingAnimation 1.4s infinite ease-in-out'
     },
-    
-    typingDot1: {
-      animationDelay: '0s'
-    },
-    
-    typingDot2: {
-      animationDelay: '0.2s'
-    },
-    
-    typingDot3: {
-      animationDelay: '0.4s'
-    },
-    
-    // Input area styling
     inputContainer: {
       display: 'flex',
       alignItems: 'center',
-      padding: '15px 20px',
-      backgroundColor: '#fff',
+      padding: '12px 20px',
+      backgroundColor: '#f8f9fa',
       borderTop: '1px solid #e0e0e0',
-      zIndex: 1
+      gap: '10px'
     },
-    
-    input: {
+    chatInput: {
       flex: 1,
-      padding: '12px 15px',
-      borderRadius: '20px',
-      border: '1px solid #e0e0e0',
+      padding: '12px 16px',
+      borderRadius: '24px',
+      border: '1px solid #ddd',
       outline: 'none',
       fontSize: '14px',
-      transition: 'border 0.3s ease',
-      marginRight: '10px'
+      transition: 'all 0.2s ease',
+      backgroundColor: '#fff',
+      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
     },
-    
-    inputFocus: {
-      border: '1px solid #2979FF',
+    chatInputFocus: {
+      borderColor: '#2979FF',
       boxShadow: '0 0 0 2px rgba(41, 121, 255, 0.2)'
     },
-    
-    button: {
-      padding: '10px 20px',
-      borderRadius: '20px',
+    chatInputHasContent: {
+      borderColor: '#2979FF'
+    },
+    sendButton: {
+      padding: '12px 24px',
+      borderRadius: '24px',
       border: 'none',
       backgroundColor: '#2979FF',
       color: '#fff',
       cursor: 'pointer',
-      fontWeight: '600',
+      fontWeight: 600,
+      fontSize: '14px',
       transition: 'all 0.2s ease',
-      outline: 'none'
-    },
-    
-    buttonHover: {
-      backgroundColor: '#1565C0',
-      transform: 'translateY(-2px)',
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
-    },
-    
-    buttonActive: {
-      transform: 'translateY(0)',
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-    },
-    
-    // Empty state
-    emptyState: {
-      textAlign: 'center',
-      padding: '40px 20px',
-      color: '#999',
-      height: '100%',
       display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
       alignItems: 'center'
     },
-    
-    emptyStateIcon: {
-      fontSize: '40px',
-      marginBottom: '15px',
-      color: '#ddd'
+    sendButtonHover: {
+      backgroundColor: '#1a68e5',
+      transform: 'translateY(-1px)'
     },
-    
-    emptyStateText: {
-      fontSize: '16px',
-      marginBottom: '10px'
+    sendButtonActive: {
+      transform: 'translateY(0)'
     },
-    
-    emptyStateSubtext: {
-      fontSize: '14px'
+    sendButtonDisabled: {
+      backgroundColor: '#cccccc',
+      cursor: 'not-allowed',
+      transform: 'none'
+    },
+    sendArrow: {
+      marginLeft: '6px'
     }
   };
 
-  // For keyframes animation in the typing indicator
-  const typingKeyframes = `
-    @keyframes typingAnimation {
-      0%, 60%, 100% { transform: translateY(0); }
-      30% { transform: translateY(-5px); }
-    }
-  `;
+  // Add animation styles to head
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+      @keyframes typingAnimation {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-5px); }
+      }
+    `;
+    document.head.appendChild(styleElement);
+    return () => document.head.removeChild(styleElement);
+  }, []);
+
+  // Handle focus style
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   return (
-    <div style={pageStyles.pageWrapper}>
-    {/* content */}
-  </div>
-      
+    <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.botAvatar}>AI</div>
         <h3 style={styles.headerTitle}>ChatBot Assistant</h3>
-        <div>
+        <div style={styles.statusWrapper}>
           <span style={styles.statusIndicator}></span>
-          <span style={styles.headerStatus}>Online</span>
+          <span style={styles.statusText}>Online</span>
         </div>
       </div>
       
@@ -325,9 +287,9 @@ function ChatBot() {
       <div style={styles.chatBox} ref={chatBoxRef}>
         {messages.length === 0 ? (
           <div style={styles.emptyState}>
-            <div style={styles.emptyStateIcon}>💬</div>
-            <p style={styles.emptyStateText}>No messages yet</p>
-            <p style={styles.emptyStateSubtext}>Send a message to start chatting</p>
+            <div style={styles.emptyIcon}>💬</div>
+            <p style={styles.emptyTitle}>No messages yet</p>
+            <p style={styles.emptySubtitle}>Send a message to start chatting</p>
           </div>
         ) : (
           messages.map((msg, index) => (
@@ -341,8 +303,11 @@ function ChatBot() {
               <div
                 style={{
                   ...styles.messageBubble,
-                  ...(msg.sender === 'user' ? styles.user : styles.bot),
-                  ...(msg.isError ? styles.botError : {})
+                  ...(msg.sender === 'user' 
+                    ? styles.userMessage 
+                    : msg.isError 
+                      ? {...styles.botMessage, ...styles.errorMessage} 
+                      : styles.botMessage)
                 }}
               >
                 {msg.text}
@@ -356,11 +321,11 @@ function ChatBot() {
         
         {/* Typing indicator */}
         {isTyping && (
-          <div style={styles.messageRow}>
+          <div style={{...styles.messageRow, ...styles.botRow}}>
             <div style={styles.typingIndicator}>
-              <div style={{...styles.typingDot, ...styles.typingDot1}}></div>
-              <div style={{...styles.typingDot, ...styles.typingDot2}}></div>
-              <div style={{...styles.typingDot, ...styles.typingDot3}}></div>
+              <div style={{...styles.typingDot, animationDelay: '0s'}}></div>
+              <div style={{...styles.typingDot, animationDelay: '0.2s'}}></div>
+              <div style={{...styles.typingDot, animationDelay: '0.4s'}}></div>
             </div>
           </div>
         )}
@@ -373,36 +338,49 @@ function ChatBot() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
-          style={styles.input}
-          onFocus={(e) => e.target.style.border = styles.inputFocus.border}
-          onBlur={(e) => e.target.style.border = styles.input.border}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          placeholder="Ask me anything..."
+          ref={inputRef}
+          style={{
+            ...styles.chatInput,
+            ...(input ? styles.chatInputHasContent : {}),
+            ...(isInputFocused ? styles.chatInputFocus : {})
+          }}
         />
         <button 
           onClick={sendMessage} 
-          style={styles.button}
+          disabled={!input.trim()}
+          style={{
+            ...styles.sendButton,
+            ...(!input.trim() ? styles.sendButtonDisabled : {}),
+          }}
           onMouseOver={(e) => {
-            e.target.style.backgroundColor = styles.buttonHover.backgroundColor;
-            e.target.style.transform = styles.buttonHover.transform;
-            e.target.style.boxShadow = styles.buttonHover.boxShadow;
+            if (input.trim()) {
+              e.currentTarget.style.backgroundColor = styles.sendButtonHover.backgroundColor;
+              e.currentTarget.style.transform = styles.sendButtonHover.transform;
+            }
           }}
           onMouseOut={(e) => {
-            e.target.style.backgroundColor = styles.button.backgroundColor;
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = 'none';
+            if (input.trim()) {
+              e.currentTarget.style.backgroundColor = styles.sendButton.backgroundColor;
+              e.currentTarget.style.transform = styles.sendButton.transform;
+            }
           }}
           onMouseDown={(e) => {
-            e.target.style.transform = styles.buttonActive.transform;
-            e.target.style.boxShadow = styles.buttonActive.boxShadow;
+            if (input.trim()) {
+              e.currentTarget.style.transform = styles.sendButtonActive.transform;
+            }
           }}
           onMouseUp={(e) => {
-            e.target.style.transform = styles.buttonHover.transform;
-            e.target.style.boxShadow = styles.buttonHover.boxShadow;
+            if (input.trim()) {
+              e.currentTarget.style.transform = styles.sendButtonHover.transform;
+            }
           }}
         >
-          Send
+          <span>Send</span>
+          <span style={styles.sendArrow}>→</span>
         </button>
-      </div>
       </div>
     </div>
   );
