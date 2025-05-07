@@ -2,6 +2,7 @@ import React from "react";
 import "./App.css"; // Import your styles (if applicable)
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
+import ChatBot from './components/ChatBot'; // ✅ Imported your chatbot component
 
 // Import components
 import Login from "./components/Login";
@@ -45,6 +46,9 @@ const App = () => {
           <Route path="/AdminDashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
           <Route path="/Support" element={isAuthenticated ? <Support /> : <Navigate to="/login" />} />
           <Route path="/Footer" element={isAuthenticated ? <Footer /> : <Navigate to="/login" />} />
+
+          {/* ✅ ChatBot route */}
+          <Route path="/chatbot" element={isAuthenticated ? <ChatBot /> : <Navigate to="/login" />} />
 
           {/* Admin-only route */}
           <Route path="/admin" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
