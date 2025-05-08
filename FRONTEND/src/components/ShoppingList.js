@@ -11,8 +11,11 @@ import {
   FaShoppingCart,
   FaCheckCircle,
   FaTimesCircle,
-  FaPlusCircle
+  FaPlusCircle,
+  FaFilePdf
 } from "react-icons/fa";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -28,6 +31,7 @@ const ShoppingList = () => {
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [message, setMessage] = useState("");
+  const [generatingReport, setGeneratingReport] = useState(false);
   const navigate = useNavigate();
 
   const showError = (errorMessage) => {
@@ -245,6 +249,79 @@ const ShoppingList = () => {
     }
   };
 
+  const generateReport = () => {
+    setGeneratingReport(true);
+    
+    try {
+      const doc = new jsPDF();
+      
+      // Report title
+      doc.setFontSize(20);
+      doc.setTextColor(0, 188, 212);
+      doc.text("Shopping List Report", 105, 20, { align: 'center' });
+      
+      // Report date
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+      
+      // Auto-added items section
+      if (autoAddedItems.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text("Auto-Added Low Stock Items", 14, 45);
+        
+        const autoAddedData = autoAddedItems.map(item => [item.name, item.quantity]);
+        
+        doc.autoTable({
+          startY: 50,
+          head: [['Item Name', 'Quantity']],
+          body: autoAddedData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [0, 188, 212],
+            textColor: 255
+          }
+        });
+      }
+      
+      // Main shopping list section
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Your Shopping List", 14, autoAddedItems.length > 0 ? doc.lastAutoTable.finalY + 15 : 45);
+      
+      const shoppingListData = shoppingList.items?.length > 0 
+        ? shoppingList.items.map(item => [item.name, item.quantity])
+        : [["No items in shopping list", ""]];
+      
+      doc.autoTable({
+        startY: autoAddedItems.length > 0 ? doc.lastAutoTable.finalY + 20 : 50,
+        head: [['Item Name', 'Quantity']],
+        body: shoppingListData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [0, 188, 212],
+          textColor: 255
+        }
+      });
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text("Inventory Management System - Shopping List", 105, doc.internal.pageSize.height - 10, { align: 'center' });
+      
+      // Save the PDF
+      doc.save(`shopping-list-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      
+      showSuccess("Report generated successfully!");
+    } catch (error) {
+      console.error("Error generating report:", error);
+      showError("Failed to generate report");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mt-5 text-center">
@@ -283,23 +360,47 @@ const ShoppingList = () => {
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
-            <button
-              onClick={handleAutoAddItems}
-              className="btn"
-              style={{
-                borderRadius: "8px",
-                padding: "10px 20px",
-                fontSize: "14px",
-                fontWeight: "500",
-                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
-                border: "none",
-                color: "white",
-                boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
-              }}
-            >
-              <FaPlusCircle className="me-2" />
-              Auto-Add Low Stock
-            </button>
+            <div>
+              <button
+                onClick={generateReport}
+                className="btn me-3"
+                disabled={generatingReport}
+                style={{
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  background: "linear-gradient(135deg, #607D8B 0%, #455A64 100%)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                }}
+              >
+                {generatingReport ? (
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                ) : (
+                  <FaFilePdf className="me-2" />
+                )}
+                Generate Report
+              </button>
+              <button
+                onClick={handleAutoAddItems}
+                className="btn"
+                style={{
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                }}
+              >
+                <FaPlusCircle className="me-2" />
+                Auto-Add Low Stock
+              </button>
+            </div>
           </div>
         </div>
 
