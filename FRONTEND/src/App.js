@@ -13,6 +13,7 @@ import InventoryForm from "./components/InventoryForm";
 import CategoryPage from "./components/AddCategory";
 import Shoppinglist from "./components/ShoppingList";
 import Navbar from "./components/Navbar";
+import Chatbot from "./components/ChatBot";
 
 // Import pages
 import HomePage from "./pages/Home";
@@ -20,6 +21,7 @@ import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
 import Support from "./pages/Support";
 import Footer from "./pages/Footer";
+
 
 
 import AdminDashboard from "./pages/AdminDashboard"; 
@@ -32,6 +34,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 
 import ShoppingList from "./components/ShoppingList"; // Import the ShoppingList component
 import AddCategory from "./components/AddCategory"; // Import the AddCategory component
+
 
 
 const App = () => {
@@ -63,6 +66,7 @@ const App = () => {
           <Route path="/AdminDashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
           <Route path="/Support" element={isAuthenticated ? <Support /> : <Navigate to="/login" />} />
           <Route path="/Footer" element={isAuthenticated ? <Footer /> : <Navigate to="/login" />} />
+          <Route path="/Chatbot" element={isAuthenticated ? <Chatbot /> : <Navigate to="/" />} />
 
 
           {/* ✅ ChatBot route */}
