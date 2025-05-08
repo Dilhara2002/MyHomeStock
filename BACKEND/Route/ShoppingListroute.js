@@ -4,8 +4,11 @@ import {
   fetchShoppingList, 
   addToShoppingList, 
   removeFromShoppingList,
-  updateShoppingListItem // Make sure this is imported
+  updateShoppingListItem,
+  autoAddLowStockItems,
+  getAutoAddedShoppingListItems
 } from "../Controller/ShoppingListController.js";
+
 import { authenticateUser } from "../Controller/UserController.js";
 
 const router = express.Router();
@@ -14,9 +17,14 @@ const router = express.Router();
 router.get("/", authenticateUser, fetchShoppingList);
 router.post("/add", authenticateUser, addToShoppingList);
 router.delete("/remove/:itemName", authenticateUser, removeFromShoppingList);
-router.put("/update/:itemName", authenticateUser, updateShoppingListItem); // New update route
+router.put("/update/:itemName", authenticateUser, updateShoppingListItem);
+router.post("/auto-add", authenticateUser, autoAddLowStockItems);
+
+// Get auto-added items
+router.get("/auto-added", authenticateUser, getAutoAddedShoppingListItems);
 
 export default router;
+
 
 import express from 'express';
 import { 
@@ -35,4 +43,5 @@ router.delete('/shopping-list/remove/:userId/:itemName', removeItemFromShoppingL
 router.post('/shopping-list/auto-add/:userId', autoAddLowStockItems);
 
 export default router;
+
 

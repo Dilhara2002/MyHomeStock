@@ -12,18 +12,21 @@ import {
   FaShoppingCart,
   FaCheckCircle,
   FaTimesCircle,
+
+  FaPlusCircle
+
   FaFilePdf,
   FaSearch
+
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [shoppingList, setShoppingList] = useState({ items: [] });
+  const [autoAddedItems, setAutoAddedItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editQuantity, setEditQuantity] = useState(1);
@@ -31,19 +34,22 @@ const ShoppingList = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+
+  const [message, setMessage] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
+
   const navigate = useNavigate();
 
-  // Message helpers
-  const showError = (message) => {
-    setError(message);
+  const showError = (errorMessage) => {
+    setMessage(errorMessage);
     setIsSuccessMessage(false);
     setShowMessageModal(true);
     setTimeout(() => setShowMessageModal(false), 5000);
   };
 
-  const showSuccess = (message) => {
-    setSuccess(message);
+  const showSuccess = (successMessage) => {
+    setMessage(successMessage);
     setIsSuccessMessage(true);
     setShowMessageModal(true);
     setTimeout(() => setShowMessageModal(false), 5000);
@@ -60,21 +66,25 @@ const ShoppingList = () => {
       try {
         setLoading(true);
         
-        // Fetch inventory items
         const inventoryResponse = await axios.get("http://localhost:5002/inventory", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setInventoryItems(inventoryResponse.data);
 
-        // Fetch shopping list
         const shoppingListResponse = await axios.get(
           "http://localhost:5002/shopping-list",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setShoppingList(shoppingListResponse.data);
+
+        const autoAddedResponse = await axios.get(
+          "http://localhost:5002/shopping-list/auto-added",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         
+        if (Array.isArray(autoAddedResponse.data)) {
+          setAutoAddedItems(autoAddedResponse.data);
+        }
       } catch (error) {
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
@@ -183,9 +193,7 @@ const ShoppingList = () => {
       const response = await axios.post(
         "http://localhost:5002/shopping-list/add",
         { itemName: selectedItem, quantity },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setShoppingList(response.data.shoppingList);
@@ -203,7 +211,7 @@ const ShoppingList = () => {
     }
   };
 
-  const handleDeleteFromShoppingList = async () => {
+  const handleAutoAddItems = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -211,25 +219,39 @@ const ShoppingList = () => {
         return;
       }
 
-      const response = await axios.delete(
-        `http://localhost:5002/shopping-list/remove/${itemToDelete}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await axios.post(
+        "http://localhost:5002/shopping-list/auto-add",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setShoppingList(response.data.shoppingList);
-      setShowDeleteModal(false);
-      showSuccess("Item removed from shopping list successfully!");
+      const shoppingListResponse = await axios.get(
+        "http://localhost:5002/shopping-list",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setShoppingList(shoppingListResponse.data);
+
+      const autoAddedResponse = await axios.get(
+        "http://localhost:5002/shopping-list/auto-added",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAutoAddedItems(autoAddedResponse.data);
+
+      showSuccess(response.data.message || "Low stock items added successfully!");
     } catch (error) {
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        console.error("Error deleting item:", error);
-        showError(error.response?.data?.message || "Error deleting item from shopping list");
-      }
+      console.error("Error auto-adding items:", error);
+      showError(error.response?.data?.message || "Error adding low stock items");
     }
+  };
+
+  const startEditing = (item) => {
+    setEditingItem(item);
+    setEditQuantity(item.quantity);
+  };
+
+  const cancelEditing = () => {
+    setEditingItem(null);
+    setEditQuantity(1);
   };
 
   const handleUpdateItem = async () => {
@@ -245,14 +267,14 @@ const ShoppingList = () => {
         return;
       }
 
-      const response = await axios.put(
+      await axios.put(
         `http://localhost:5002/shopping-list/update/${editingItem.name}`,
         { quantity: editQuantity },
-        {
+        { 
           headers: { 
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
-          },
+          } 
         }
       );
 
@@ -265,38 +287,49 @@ const ShoppingList = () => {
         )
       }));
       
-      setEditingItem(null);
-      setEditQuantity(1);
+      cancelEditing();
       showSuccess("Item quantity updated successfully!");
     } catch (error) {
       console.error("Update error:", error);
-      
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
       } else {
-        showError(
-          error.response?.data?.message || 
-          error.response?.data?.error || 
-          "Error updating item quantity"
-        );
+        showError(error.response?.data?.message || "Error updating item quantity");
       }
     }
-  };
-
-  const startEditing = (item) => {
-    setEditingItem(item);
-    setEditQuantity(item.quantity);
-  };
-
-  const cancelEditing = () => {
-    setEditingItem(null);
-    setEditQuantity(1);
   };
 
   const confirmDelete = (itemName) => {
     setItemToDelete(itemName);
     setShowDeleteModal(true);
+  };
+
+  const handleDeleteFromShoppingList = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.delete(
+        `http://localhost:5002/shopping-list/remove/${itemToDelete}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setShoppingList(response.data.shoppingList);
+      setShowDeleteModal(false);
+      showSuccess("Item removed from shopping list successfully!");
+    } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        console.error("Error deleting item:", error);
+        showError(error.response?.data?.message || "Error deleting item from shopping list");
+      }
+    }
   };
 
   if (loading) {
@@ -337,6 +370,24 @@ const ShoppingList = () => {
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
+
+            <button
+              onClick={handleAutoAddItems}
+              className="btn"
+              style={{
+                borderRadius: "8px",
+                padding: "10px 20px",
+                fontSize: "14px",
+                fontWeight: "500",
+                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                border: "none",
+                color: "white",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+              }}
+            >
+              <FaPlusCircle className="me-2" />
+              Auto-Add Low Stock
+
             <button 
               onClick={generatePDF} 
               className="btn btn-light" 
@@ -354,6 +405,7 @@ const ShoppingList = () => {
               }}
             >
               <FaFilePdf /> Generate Report
+
             </button>
           </div>
         </div>
@@ -429,6 +481,66 @@ const ShoppingList = () => {
             </div>
           </div>
 
+
+          {/* Auto-Added Items Section */}
+          {autoAddedItems.length > 0 && (
+            <div className="card mb-4" style={{
+              borderRadius: "10px",
+              border: "none",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+            }}>
+              <div className="card-body">
+                <h5 className="mb-3" style={{ fontWeight: "600" }}>
+                  <FaPlusCircle className="me-2" />
+                  Auto-Added Low Stock Items
+                </h5>
+                <div className="table-responsive">
+                  <table className="table table-hover mb-0">
+                    <thead>
+                      <tr style={{
+                        backgroundColor: "#f8f9fa",
+                        borderBottom: "2px solid #e9ecef"
+                      }}>
+                        <th scope="col" style={{
+                          padding: "15px 20px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                          color: "#495057"
+                        }}>Name</th>
+                        <th scope="col" style={{
+                          padding: "15px 20px",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                          color: "#495057"
+                        }}>Quantity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {autoAddedItems.map((item, index) => (
+                        <tr key={`auto-${index}`} style={{
+                          transition: "background-color 0.2s",
+                          borderBottom: "1px solid #e9ecef"
+                        }}>
+                          <td style={{
+                            padding: "15px 20px",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            verticalAlign: "middle"
+                          }}>{item.name}</td>
+                          <td style={{
+                            padding: "15px 20px",
+                            fontSize: "15px",
+                            verticalAlign: "middle"
+                          }}>{item.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search Box */}
           <div className="mb-4">
             <div className="input-group" style={{ boxShadow: "0 2px 5px rgba(0,0,0,0.08)" }}>
@@ -455,6 +567,7 @@ const ShoppingList = () => {
               />
             </div>
           </div>
+
 
           {/* Shopping List Items */}
           <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>Your Shopping List</h5>
@@ -820,7 +933,7 @@ const ShoppingList = () => {
                   )}
                 </div>
                 <p className="mb-0" style={{ fontWeight: "500" }}>
-                  {isSuccessMessage ? success : error}
+                  {message}
                 </p>
               </div>
               <div className="modal-footer" style={{
