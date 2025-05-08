@@ -10,8 +10,11 @@ import {
   FaExclamationTriangle,
   FaShoppingCart,
   FaCheckCircle,
-  FaTimesCircle
+  FaTimesCircle,
+  FaFilePdf,
+  FaSearch
 } from "react-icons/fa";
+import { jsPDF } from "jspdf";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -27,6 +30,7 @@ const ShoppingList = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   // Message helpers
@@ -85,6 +89,82 @@ const ShoppingList = () => {
 
     fetchData();
   }, [navigate]);
+
+  // Generate PDF report
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Shopping List Report", 105, 20, { align: 'center' });
+    
+    // Date
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+    
+    // Summary Stats
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Summary", 14, 45);
+    
+    const totalItems = shoppingList.items?.length || 0;
+    
+    doc.setFontSize(12);
+    doc.text(`Total Items: ${totalItems}`, 14, 55);
+    
+    // Table Header
+    doc.setFontSize(14);
+    doc.text("Shopping List Items", 14, 70);
+    
+    // Table column headers
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text("Name", 14, 80);
+    doc.text("Quantity", 100, 80);
+    
+    // Table rows
+    doc.setFont(undefined, 'normal');
+    let y = 90;
+    filteredItems.forEach((item, index) => {
+      if (y > 280) { // Add new page if we're at the bottom
+        doc.addPage();
+        y = 20;
+        // Add headers to new page
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text("Name", 14, y);
+        doc.text("Quantity", 100, y);
+        doc.setFont(undefined, 'normal');
+        y += 10;
+      }
+      
+      doc.text(item.name, 14, y);
+      doc.text(item.quantity.toString(), 100, y);
+      
+      // Add horizontal line
+      doc.line(14, y + 5, 190, y + 5);
+      
+      y += 10;
+    });
+    
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
+    
+    doc.save(`shopping_list_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
+  // Filter items based on search term
+  const filteredItems = shoppingList.items?.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   const handleAddToShoppingList = async () => {
     if (!selectedItem || quantity <= 0) {
@@ -256,6 +336,24 @@ const ShoppingList = () => {
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
+            <button 
+              onClick={generatePDF} 
+              className="btn btn-light" 
+              style={{
+                borderRadius: "50px",
+                padding: "12px 25px",
+                fontWeight: "600",
+                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                transition: "all 0.3s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "white",
+                color: "#00838F"
+              }}
+            >
+              <FaFilePdf /> Generate Report
+            </button>
           </div>
         </div>
 
@@ -330,9 +428,36 @@ const ShoppingList = () => {
             </div>
           </div>
 
+          {/* Search Box */}
+          <div className="mb-4">
+            <div className="input-group" style={{ boxShadow: "0 2px 5px rgba(0,0,0,0.08)" }}>
+              <span className="input-group-text bg-white" style={{ 
+                borderRadius: "10px 0 0 10px", 
+                border: "2px solid #e0e0e0",
+                borderRight: "none" 
+              }}>
+                <FaSearch />
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search shopping list items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ 
+                  borderRadius: "0 10px 10px 0", 
+                  border: "2px solid #e0e0e0", 
+                  borderLeft: "none",
+                  padding: "12px 15px",
+                  fontSize: "16px"
+                }}
+              />
+            </div>
+          </div>
+
           {/* Shopping List Items */}
           <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>Your Shopping List</h5>
-          {shoppingList.items?.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="alert alert-info" style={{
               borderRadius: "10px",
               border: "none",
@@ -342,7 +467,7 @@ const ShoppingList = () => {
               textAlign: "center"
             }}>
               <FaShoppingCart size={24} className="me-2" />
-              Your shopping list is empty
+              {searchTerm ? "No matching items found" : "Your shopping list is empty"}
             </div>
           ) : (
             <div className="table-responsive" style={{
@@ -378,7 +503,7 @@ const ShoppingList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {shoppingList.items?.map((item, index) => (
+                  {filteredItems.map((item, index) => (
                     <tr key={index} style={{
                       transition: "background-color 0.2s",
                       borderBottom: "1px solid #e9ecef"
