@@ -3,7 +3,8 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import { FaBoxOpen, FaPlus, FaTrashAlt, FaEdit, FaExclamationTriangle, FaCalendarAlt, FaTag, FaList } from "react-icons/fa";
+import { FaBoxOpen, FaPlus, FaTrashAlt, FaEdit, FaExclamationTriangle, FaCalendarAlt, FaTag, FaList, FaFilePdf } from "react-icons/fa";
+import { jsPDF } from "jspdf";
 
 const InventoryList = () => {
   const [items, setItems] = useState([]);
@@ -114,6 +115,96 @@ const InventoryList = () => {
     }
   };
 
+  // Generate PDF report
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Inventory Report", 105, 20, { align: 'center' });
+    
+    // Date
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+    
+    // Summary Stats
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Summary Statistics", 14, 45);
+    
+    const totalItems = items.length;
+    const nearingExpiry = items.filter(item => isNearingExpiry(item.expiryDate)).length;
+    const expiredItems = items.filter(item => isExpired(item.expiryDate)).length;
+    const uniqueCats = [...new Set(items.map((item) => item.category).filter(Boolean))].length;
+    
+    doc.setFontSize(12);
+    doc.text(`Total Items: ${totalItems}`, 14, 55);
+    doc.text(`Nearing Expiry: ${nearingExpiry}`, 14, 65);
+    doc.text(`Expired Items: ${expiredItems}`, 14, 75);
+    doc.text(`Categories: ${uniqueCats}`, 14, 85);
+    
+    // Table Header
+    doc.setFontSize(14);
+    doc.text("Inventory Items", 14, 100);
+    
+    // Table column headers
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text("Name", 14, 110);
+    doc.text("Quantity", 60, 110);
+    doc.text("Expiry Date", 100, 110);
+    doc.text("Category", 140, 110);
+    doc.text("Status", 180, 110);
+    
+    // Table rows
+    doc.setFont(undefined, 'normal');
+    let y = 120;
+    filteredItems.forEach((item, index) => {
+      if (y > 280) { // Add new page if we're at the bottom
+        doc.addPage();
+        y = 20;
+        // Add headers to new page
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text("Name", 14, y);
+        doc.text("Quantity", 60, y);
+        doc.text("Expiry Date", 100, y);
+        doc.text("Category", 140, y);
+        doc.text("Status", 180, y);
+        doc.setFont(undefined, 'normal');
+        y += 10;
+      }
+      
+      doc.text(item.name, 14, y);
+      doc.text(`${item.quantity} ${item.unit}`, 60, y);
+      doc.text(item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A', 100, y);
+      doc.text(item.category || 'N/A', 140, y);
+      doc.text(
+        isExpired(item.expiryDate) ? 'Expired' : 
+        isNearingExpiry(item.expiryDate) ? 'Nearing Expiry' : 'Good', 
+        180, y
+      );
+      
+      // Add horizontal line
+      doc.line(14, y + 5, 190, y + 5);
+      
+      y += 10;
+    });
+    
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
+    
+    doc.save(`inventory_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   // Filter items based on search term and category
   const filteredItems = items.filter(
     (item) =>
@@ -169,20 +260,40 @@ const InventoryList = () => {
               <FaBoxOpen className="me-3" />
               Inventory Management
             </h2>
-            <Link to="/inventory/add" className="btn btn-light" style={{
-              borderRadius: "50px",
-              padding: "12px 25px",
-              fontWeight: "600",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-              transition: "all 0.3s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              backgroundColor: "white",
-              color: "#00838F"
-            }}>
-              <FaPlus /> Add New Item
-            </Link>
+            <div className="d-flex gap-3">
+              <button 
+                onClick={generatePDF} 
+                className="btn btn-light" 
+                style={{
+                  borderRadius: "50px",
+                  padding: "12px 25px",
+                  fontWeight: "600",
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                  transition: "all 0.3s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: "white",
+                  color: "#00838F"
+                }}
+              >
+                <FaFilePdf /> Generate Report
+              </button>
+              <Link to="/inventory/add" className="btn btn-light" style={{
+                borderRadius: "50px",
+                padding: "12px 25px",
+                fontWeight: "600",
+                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                transition: "all 0.3s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "white",
+                color: "#00838F"
+              }}>
+                <FaPlus /> Add New Item
+              </Link>
+            </div>
           </div>
         </div>
         
@@ -252,7 +363,7 @@ const InventoryList = () => {
 
           {/* Stats Cards */}
           <div className="row mb-4 g-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
               <div className="card h-100" style={{ 
                 borderRadius: "10px", 
                 border: "none", 
@@ -278,7 +389,7 @@ const InventoryList = () => {
                 </div>
               </div>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
               <div className="card h-100" style={{ 
                 borderRadius: "10px", 
                 border: "none", 
@@ -306,7 +417,7 @@ const InventoryList = () => {
                 </div>
               </div>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
               <div className="card h-100" style={{ 
                 borderRadius: "10px", 
                 border: "none", 
@@ -330,6 +441,34 @@ const InventoryList = () => {
                       {uniqueCategories.length}
                     </h3>
                     <p className="mb-0" style={{ color: "#6c757d" }}>Categories</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card h-100" style={{ 
+                borderRadius: "10px", 
+                border: "none", 
+                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+              }}>
+                <div className="card-body d-flex align-items-center">
+                  <div style={{ 
+                    width: "60px",
+                    height: "60px",
+                    backgroundColor: "rgba(244, 67, 54, 0.1)",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: "15px"
+                  }}>
+                    <FaExclamationTriangle size={25} style={{ color: "#F44336" }} />
+                  </div>
+                  <div>
+                    <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
+                      {items.filter(item => isExpired(item.expiryDate)).length}
+                    </h3>
+                    <p className="mb-0" style={{ color: "#6c757d" }}>Expired Items</p>
                   </div>
                 </div>
               </div>
@@ -710,7 +849,9 @@ const InventoryList = () => {
                         <option value="kg">kg</option>
                         <option value="liters">liters</option>
                         <option value="pieces">pieces</option>
-                        
+                        <option value="grams">grams</option>
+                        <option value="ml">ml</option>
+                        <option value="packs">packs</option>
                       </select>
                     </div>
                   </div>
