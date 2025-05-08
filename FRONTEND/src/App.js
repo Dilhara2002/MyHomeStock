@@ -24,6 +24,19 @@ import Footer from "./pages/Footer";
 
 
 
+import AdminDashboard from "./pages/AdminDashboard"; 
+ import CategoryPage from "./components/AddCategory";
+ import Shoppinglist from "./components/ShoppingList";
+ import Support from "./pages/Support";
+ import Footer from "./pages/Footer";
+
+
+
+import ShoppingList from "./components/ShoppingList"; // Import the ShoppingList component
+import AddCategory from "./components/AddCategory"; // Import the AddCategory component
+
+
+
 const App = () => {
   const isAuthenticated = !!localStorage.getItem("token");
 
@@ -32,7 +45,11 @@ const App = () => {
       <Navbar />
       <div>
         <Routes>
+
           {/* Redirect root path to login if not authenticated */}
+
+          {/* Redirect root path to home page if authenticated, otherwise to login */}
+
           <Route path="/" element={isAuthenticated ? <HomePage /> : <Navigate to="/login" />} />
 
           {/* Public routes */}
@@ -51,8 +68,32 @@ const App = () => {
           <Route path="/Footer" element={isAuthenticated ? <Footer /> : <Navigate to="/login" />} />
           <Route path="/Chatbot" element={isAuthenticated ? <Chatbot /> : <Navigate to="/" />} />
 
+
+          {/* ✅ ChatBot route */}
+          <Route path="/chatbot" element={isAuthenticated ? <ChatBot /> : <Navigate to="/login" />} />
+
+
           {/* Admin-only route */}
           <Route path="/admin" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
+          <Route
+            path="/admin"
+            element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />}
+          />
+
+          {/* Protected routes */}
+          <Route path="/dashboard" element={isAuthenticated ? <InventoryList /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+          <Route path="/inventory/:action/:id?" element={isAuthenticated ? <InventoryForm /> : <Navigate to="/login" />} />
+          <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
+
+          {/* Shopping List route */}
+          <Route path="/shopping-list/:userId" element={isAuthenticated ? <ShoppingList /> : <Navigate to="/login" />} />
+
+          {/* Add Category route */}
+          <Route path="/add-category" element={isAuthenticated ? <AddCategory /> : <Navigate to="/api/categories" />} />
+
+
+
 
           {/* Fallback route for invalid paths */}
           <Route path="*" element={<Navigate to="/" />} />
