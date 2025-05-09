@@ -46,14 +46,6 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
     // === Intent: Expiring Items ===
     if (
-      lowerMsg.includes("name") ||
-      lowerMsg.includes("who are you") ||
-      lowerMsg.includes("what is your name")
-    ) {
-      return res.json({ reply: "I’m HomeStock, your smart home inventory assistant!" });
-    }
-
-    if (
       lowerMsg.includes('expire') ||
       lowerMsg.includes('expired') ||
       lowerMsg.includes('about to expire')
