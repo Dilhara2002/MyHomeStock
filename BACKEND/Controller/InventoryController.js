@@ -95,4 +95,3 @@ export const checkExpiringItems = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
-

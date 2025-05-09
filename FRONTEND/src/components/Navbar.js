@@ -6,7 +6,6 @@ import { ShoppingCart, User, LogOut, Settings, Bell } from "lucide-react";
 import logo from './logo.png';
 
 const Navbar = () => {
-
   const [userData, setUserData] = useState({
     profilePicture: "",
     username: "",
@@ -14,11 +13,6 @@ const Navbar = () => {
     notifications: 0
   });
   const [profileImageUrl, setProfileImageUrl] = useState("");
-
-
-  const [profilePicture, setProfilePicture] = useState("");
-  const [userId, setUserId] = useState(null);  // To store the userId
-
   const [showDropdown, setShowDropdown] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -39,9 +33,6 @@ const Navbar = () => {
     }
   };
 
-
-
-  // Enhanced auth check with role verification
   const checkAuthAndFetchProfile = async () => {
     const token = localStorage.getItem("token");
     const authStatus = !!token;
@@ -88,15 +79,10 @@ const Navbar = () => {
     }
   };
 
-  // Initial setup with localStorage check
-
-  // Fetch user profile picture and userId on component mount
-
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       try {
-
         const parsedData = JSON.parse(storedUserData);
         setUserData(prev => ({
           ...prev,
@@ -110,22 +96,6 @@ const Navbar = () => {
         }
       } catch (e) {
         console.error("Error parsing stored user data:", e);
-
-        const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5002/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.data.profilePicture) {
-          setProfilePicture(response.data.profilePicture);
-        }
-        
-        if (response.data.userId) {
-          setUserId(response.data.userId); // Set the userId from the profile API
-        }
-      } catch (error) {
-        console.error("Error fetching profile picture:", error);
-
       }
     }
 
@@ -211,7 +181,6 @@ const Navbar = () => {
         </button>
 
         <div className="collapse navbar-collapse" id="navbarNav">
-
           {isAuthenticated && (
             <>
               <ul className="navbar-nav me-auto">
@@ -314,59 +283,6 @@ const Navbar = () => {
                     </div>
                   )}
                 </div>
-
-          <ul className="navbar-nav me-auto">
-            <li className="nav-item">
-              <Link to="/dashboard" className="nav-link">
-                Inventory
-              </Link>
-            </li>
-
-            {/* Shopping List link with userId as a parameter */}
-            <li className="nav-item">
-              <Link to={`/shopping-list/${userId}`} className="nav-link">
-                Shopping List
-              </Link>
-            </li>
-
-            <li className="nav-item">
-              <Link to="/profile" className="nav-link">
-                Profile
-              </Link>
-            </li>
-          </ul>
-
-          {/* Profile Picture and Dropdown */}
-          <div className="dropdown">
-            <button
-              className="btn btn-link dropdown-toggle"
-              type="button"
-              id="profileDropdown"
-              onClick={() => setShowDropdown(!showDropdown)}
-              style={{ padding: 0, border: "none" }}
-            >
-              {profilePicture ? (
-                <img
-                  src={profilePicture}
-                  alt="Profile"
-                  style={{ width: "40px", height: "40px", borderRadius: "50%" }}
-                />
-              ) : (
-                <i className="fas fa-user-circle" style={{ fontSize: "24px", color: "#fff" }}></i>
-              )}
-            </button>
-
-            {/* Dropdown Menu */}
-            {showDropdown && (
-              <div
-                className="dropdown-menu dropdown-menu-end"
-                aria-labelledby="profileDropdown"
-                style={{ position: "absolute", right: 0 }}
-              >
-                <button className="dropdown-item" onClick={handleLogout}>
-                  Sign Out
-                </button>
-
               </div>
             </>
           )}

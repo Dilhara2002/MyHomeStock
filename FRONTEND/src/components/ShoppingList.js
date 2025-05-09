@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -12,14 +11,8 @@ import {
   FaShoppingCart,
   FaCheckCircle,
   FaTimesCircle,
-
   FaPlusCircle
-
-  FaFilePdf,
-  FaSearch
-
 } from "react-icons/fa";
-import { jsPDF } from "jspdf";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -34,11 +27,7 @@ const ShoppingList = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-
   const [message, setMessage] = useState("");
-
-  const [searchTerm, setSearchTerm] = useState("");
-
   const navigate = useNavigate();
 
   const showError = (errorMessage) => {
@@ -100,82 +89,6 @@ const ShoppingList = () => {
 
     fetchData();
   }, [navigate]);
-
-  // Generate PDF report
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Shopping List Report", 105, 20, { align: 'center' });
-    
-    // Date
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
-    
-    // Summary Stats
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Summary", 14, 45);
-    
-    const totalItems = shoppingList.items?.length || 0;
-    
-    doc.setFontSize(12);
-    doc.text(`Total Items: ${totalItems}`, 14, 55);
-    
-    // Table Header
-    doc.setFontSize(14);
-    doc.text("Shopping List Items", 14, 70);
-    
-    // Table column headers
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text("Name", 14, 80);
-    doc.text("Quantity", 100, 80);
-    
-    // Table rows
-    doc.setFont(undefined, 'normal');
-    let y = 90;
-    filteredItems.forEach((item, index) => {
-      if (y > 280) { // Add new page if we're at the bottom
-        doc.addPage();
-        y = 20;
-        // Add headers to new page
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text("Name", 14, y);
-        doc.text("Quantity", 100, y);
-        doc.setFont(undefined, 'normal');
-        y += 10;
-      }
-      
-      doc.text(item.name, 14, y);
-      doc.text(item.quantity.toString(), 100, y);
-      
-      // Add horizontal line
-      doc.line(14, y + 5, 190, y + 5);
-      
-      y += 10;
-    });
-    
-    // Footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
-    }
-    
-    doc.save(`shopping_list_report_${new Date().toISOString().slice(0, 10)}.pdf`);
-  };
-
-  // Filter items based on search term
-  const filteredItems = shoppingList.items?.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
 
   const handleAddToShoppingList = async () => {
     if (!selectedItem || quantity <= 0) {
@@ -370,7 +283,6 @@ const ShoppingList = () => {
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
-
             <button
               onClick={handleAutoAddItems}
               className="btn"
@@ -387,25 +299,6 @@ const ShoppingList = () => {
             >
               <FaPlusCircle className="me-2" />
               Auto-Add Low Stock
-
-            <button 
-              onClick={generatePDF} 
-              className="btn btn-light" 
-              style={{
-                borderRadius: "50px",
-                padding: "12px 25px",
-                fontWeight: "600",
-                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                backgroundColor: "white",
-                color: "#00838F"
-              }}
-            >
-              <FaFilePdf /> Generate Report
-
             </button>
           </div>
         </div>
@@ -481,7 +374,6 @@ const ShoppingList = () => {
             </div>
           </div>
 
-
           {/* Auto-Added Items Section */}
           {autoAddedItems.length > 0 && (
             <div className="card mb-4" style={{
@@ -541,37 +433,9 @@ const ShoppingList = () => {
             </div>
           )}
 
-          {/* Search Box */}
-          <div className="mb-4">
-            <div className="input-group" style={{ boxShadow: "0 2px 5px rgba(0,0,0,0.08)" }}>
-              <span className="input-group-text bg-white" style={{ 
-                borderRadius: "10px 0 0 10px", 
-                border: "2px solid #e0e0e0",
-                borderRight: "none" 
-              }}>
-                <FaSearch />
-              </span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search shopping list items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ 
-                  borderRadius: "0 10px 10px 0", 
-                  border: "2px solid #e0e0e0", 
-                  borderLeft: "none",
-                  padding: "12px 15px",
-                  fontSize: "16px"
-                }}
-              />
-            </div>
-          </div>
-
-
           {/* Shopping List Items */}
           <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>Your Shopping List</h5>
-          {filteredItems.length === 0 ? (
+          {shoppingList.items?.length === 0 ? (
             <div className="alert alert-info" style={{
               borderRadius: "10px",
               border: "none",
@@ -581,7 +445,7 @@ const ShoppingList = () => {
               textAlign: "center"
             }}>
               <FaShoppingCart size={24} className="me-2" />
-              {searchTerm ? "No matching items found" : "Your shopping list is empty"}
+              Your shopping list is empty
             </div>
           ) : (
             <div className="table-responsive" style={{
@@ -617,7 +481,7 @@ const ShoppingList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item, index) => (
+                  {shoppingList.items?.map((item, index) => (
                     <tr key={index} style={{
                       transition: "background-color 0.2s",
                       borderBottom: "1px solid #e9ecef"
@@ -993,198 +857,3 @@ const ShoppingList = () => {
 };
 
 export default ShoppingList;
-
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, List, ListItem, ListItemText, IconButton, Paper, Grid, Divider, Badge } from '@mui/material';
-import { Delete, Add, ShoppingCart, Edit } from '@mui/icons-material';
-
-const ShoppingList = () => {
-  const [shoppingList, setShoppingList] = useState([]);
-  const [itemName, setItemName] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editItemName, setEditItemName] = useState('');
-  const [editQuantity, setEditQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Fetch shopping list for the user
-  useEffect(() => {
-    const userId = 'someUserId'; // Replace with actual userId
-    const fetchShoppingList = async () => {
-      try {
-        const response = await fetch(`/api/shopping-list/${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setShoppingList(data.shoppingList.items);
-        } else {
-          console.error('Failed to fetch shopping list');
-        }
-      } catch (error) {
-        console.error('Error fetching shopping list:', error);
-      }
-    };
-
-    fetchShoppingList();
-  }, []);
-
-  // Add item to shopping list
-  const addItem = async () => {
-    if (itemName.trim() && quantity > 0) {
-      const userId = 'someUserId'; // Replace with actual userId
-      const newItem = { userId, itemName, quantity };
-      try {
-        const response = await fetch('/api/shopping-list/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(newItem)
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setShoppingList(data.shoppingList.items); // Update shopping list
-          setItemName('');
-          setQuantity(1);
-        } else {
-          setError('Failed to add item');
-        }
-      } catch (error) {
-        setError('Failed to add item');
-      }
-    } else {
-      setError('Please provide a valid item name and quantity');
-    }
-  };
-
-  // Remove item from shopping list
-  const removeItem = async (itemName) => {
-    const userId = 'someUserId'; // Replace with actual userId
-    try {
-      const response = await fetch(`/api/shopping-list/remove/${userId}/${itemName}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setShoppingList(data.shoppingList.items); // Update shopping list
-      } else {
-        setError('Failed to remove item');
-      }
-    } catch (error) {
-      setError('Failed to remove item');
-    }
-  };
-
-  // Edit item in shopping list
-  const startEdit = (itemName, quantity) => {
-    setIsEditing(true);
-    setEditItemName(itemName);
-    setEditQuantity(quantity);
-  };
-
-  const saveEdit = async () => {
-    const userId = 'someUserId'; // Replace with actual userId
-    const updatedItem = { userId, itemName: editItemName, quantity: editQuantity };
-    try {
-      const response = await fetch('/api/shopping-list/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedItem)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setShoppingList(data.shoppingList.items); // Update shopping list
-        setIsEditing(false);
-        setEditItemName('');
-        setEditQuantity(1);
-      } else {
-        setError('Failed to update item');
-      }
-    } catch (error) {
-      setError('Failed to update item');
-    }
-  };
-
-  return (
-    <Paper elevation={3} sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <ShoppingCart sx={{ mr: 2, color: '#3b82f6' }} />
-        <Typography variant="h5" fontWeight="bold">
-          Your Shopping List
-        </Typography>
-        <Badge badgeContent={shoppingList.length} color="primary" sx={{ ml: 2 }} />
-      </Box>
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Error Message */}
-      {error && <Typography color="error">{error}</Typography>}
-
-      {/* Add Item Section */}
-      {!isEditing ? (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            label="Item Name"
-            fullWidth
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Quantity"
-            type="number"
-            fullWidth
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Button variant="contained" color="primary" fullWidth onClick={addItem}>
-            Add Item
-          </Button>
-        </Box>
-      ) : (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            label="Edit Item Name"
-            fullWidth
-            value={editItemName}
-            onChange={(e) => setEditItemName(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Edit Quantity"
-            type="number"
-            fullWidth
-            value={editQuantity}
-            onChange={(e) => setEditQuantity(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Button variant="contained" color="primary" fullWidth onClick={saveEdit}>
-            Save Changes
-          </Button>
-        </Box>
-      )}
-
-      {/* Shopping List */}
-      <List>
-        {shoppingList.map((item, index) => (
-          <ListItem key={index} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <ListItemText primary={item.name} secondary={`Quantity: ${item.quantity}`} />
-            <Box>
-              <IconButton color="primary" onClick={() => startEdit(item.name, item.quantity)}>
-                <Edit />
-              </IconButton>
-              <IconButton color="secondary" onClick={() => removeItem(item.name)}>
-                <Delete />
-              </IconButton>
-            </Box>
-          </ListItem>
-        ))}
-      </List>
-    </Paper>
-  );
-};
-
-export default ShoppingList;
-
