@@ -18,7 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/chatbot', chatbotRoutes);
+// app.use('/api/chatbot', chatbotRoutes);
 
 
 // MongoDB connection using environment variables
@@ -37,7 +37,7 @@ app.use("/inventory", InventoryRoute); // Handling inventory routes
 app.use("/users", UserRoute); 
 app.use("/admin", adminRoutes);
 app.use("/shopping-list", shoppingListRoutes);
-app.use('/api/chatbot', chatbotRoutes);
+app.use('/chatbot', chatbotRoutes);
 
 // Dialogflow Webhook Route
 // Webhook Route
