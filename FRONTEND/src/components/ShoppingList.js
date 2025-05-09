@@ -1,3 +1,5 @@
+// aluth bosa - Shopping List Component with Search and Report Generation
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -11,8 +13,12 @@ import {
   FaShoppingCart,
   FaCheckCircle,
   FaTimesCircle,
-  FaPlusCircle
+  FaPlusCircle,
+  FaSearch,
+  FaFileExport
 } from "react-icons/fa";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -28,6 +34,7 @@ const ShoppingList = () => {
   const [isSuccessMessage, setIsSuccessMessage] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [message, setMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   const showError = (errorMessage) => {
@@ -71,9 +78,8 @@ const ShoppingList = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        if (Array.isArray(autoAddedResponse.data)) {
-          setAutoAddedItems(autoAddedResponse.data);
-        }
+        // Ensure autoAddedItems is always an array
+        setAutoAddedItems(Array.isArray(autoAddedResponse.data) ? autoAddedResponse.data : []);
       } catch (error) {
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
@@ -148,7 +154,8 @@ const ShoppingList = () => {
         "http://localhost:5002/shopping-list/auto-added",
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setAutoAddedItems(autoAddedResponse.data);
+      // Ensure autoAddedItems is always an array
+      setAutoAddedItems(Array.isArray(autoAddedResponse.data) ? autoAddedResponse.data : []);
 
       showSuccess(response.data.message || "Low stock items added successfully!");
     } catch (error) {
@@ -245,6 +252,89 @@ const ShoppingList = () => {
     }
   };
 
+  // Filter shopping list items based on search term
+  const filteredItems = Array.isArray(shoppingList.items) ? 
+    shoppingList.items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) : 
+    [];
+
+  // Filter auto-added items based on search term
+  const filteredAutoAddedItems = Array.isArray(autoAddedItems) ? 
+    autoAddedItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) : 
+    [];
+
+  // Generate PDF report
+const generateReport = () => {
+  // Initialize jsPDF with autoTable plugin
+  const doc = new jsPDF();
+  
+  // Import autoTable plugin (this is crucial)
+  doc.autoTable = require('jspdf-autotable');
+
+  // Report title
+  doc.setFontSize(20);
+  doc.setTextColor(0, 188, 212);
+  doc.text("Shopping List Report", 105, 20, { align: 'center' });
+  
+  // Report date
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+  
+  let finalY = 40; // Track the Y position for the next section
+  
+  // Auto-added items section
+  if (filteredAutoAddedItems.length > 0) {
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Auto-Added Low Stock Items", 14, 45);
+    
+    const autoAddedData = filteredAutoAddedItems.map(item => [
+      item.name,
+      item.quantity
+    ]);
+    
+    doc.autoTable({
+      startY: 50,
+      head: [['Item Name', 'Quantity']],
+      body: autoAddedData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [0, 188, 212],
+        textColor: 255
+      }
+    });
+    
+    finalY = doc.lastAutoTable.finalY + 15;
+  }
+  
+  // Manual items section
+  if (filteredItems.length > 0) {
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Manual Shopping List Items", 14, finalY);
+    
+    const manualItemsData = filteredItems.map(item => [
+      item.name,
+      item.quantity
+    ]);
+    
+    doc.autoTable({
+      startY: finalY + 5,
+      head: [['Item Name', 'Quantity']],
+      body: manualItemsData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [76, 175, 80],
+        textColor: 255
+      }
+    });
+  }
+  
+  // Save the PDF
+  doc.save(`shopping-list-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  showSuccess("Report generated successfully!");
+};
+
   if (loading) {
     return (
       <div className="container mt-5 text-center">
@@ -283,27 +373,81 @@ const ShoppingList = () => {
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
-            <button
-              onClick={handleAutoAddItems}
-              className="btn"
-              style={{
-                borderRadius: "8px",
-                padding: "10px 20px",
-                fontSize: "14px",
-                fontWeight: "500",
-                background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
-                border: "none",
-                color: "white",
-                boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
-              }}
-            >
-              <FaPlusCircle className="me-2" />
-              Auto-Add Low Stock
-            </button>
+            <div>
+              <button
+                onClick={handleAutoAddItems}
+                className="btn me-3"
+                style={{
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                }}
+              >
+                <FaPlusCircle className="me-2" />
+                Auto-Add Low Stock
+              </button>
+              <button
+                onClick={generateReport}
+                className="btn"
+                style={{
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  background: "linear-gradient(135deg, #FF9800 0%, #F57C00 100%)",
+                  border: "none",
+                  color: "white",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                }}
+              >
+                <FaFileExport className="me-2" />
+                Generate Report
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="card-body p-4">
+          {/* Search Bar */}
+          <div className="card mb-4" style={{
+            borderRadius: "10px",
+            border: "none",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+          }}>
+            <div className="card-body">
+              <div className="input-group">
+                <span className="input-group-text" style={{
+                  background: "white",
+                  borderRight: "none",
+                  border: "2px solid #e0e0e0",
+                  borderTopLeftRadius: "8px",
+                  borderBottomLeftRadius: "8px"
+                }}>
+                  <FaSearch />
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    borderLeft: "none",
+                    borderRadius: "0 8px 8px 0",
+                    border: "2px solid #e0e0e0",
+                    padding: "12px 15px",
+                    fontSize: "15px"
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Add Item Form */}
           <div className="card mb-4" style={{
             borderRadius: "10px",
@@ -375,7 +519,7 @@ const ShoppingList = () => {
           </div>
 
           {/* Auto-Added Items Section */}
-          {autoAddedItems.length > 0 && (
+          {filteredAutoAddedItems.length > 0 && (
             <div className="card mb-4" style={{
               borderRadius: "10px",
               border: "none",
@@ -408,7 +552,7 @@ const ShoppingList = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {autoAddedItems.map((item, index) => (
+                      {filteredAutoAddedItems.map((item, index) => (
                         <tr key={`auto-${index}`} style={{
                           transition: "background-color 0.2s",
                           borderBottom: "1px solid #e9ecef"
@@ -435,7 +579,7 @@ const ShoppingList = () => {
 
           {/* Shopping List Items */}
           <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>Your Shopping List</h5>
-          {shoppingList.items?.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="alert alert-info" style={{
               borderRadius: "10px",
               border: "none",
@@ -445,7 +589,7 @@ const ShoppingList = () => {
               textAlign: "center"
             }}>
               <FaShoppingCart size={24} className="me-2" />
-              Your shopping list is empty
+              {searchTerm ? "No matching items found" : "Your shopping list is empty"}
             </div>
           ) : (
             <div className="table-responsive" style={{
@@ -481,7 +625,7 @@ const ShoppingList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {shoppingList.items?.map((item, index) => (
+                  {filteredItems.map((item, index) => (
                     <tr key={index} style={{
                       transition: "background-color 0.2s",
                       borderBottom: "1px solid #e9ecef"

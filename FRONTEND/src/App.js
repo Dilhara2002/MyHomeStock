@@ -12,6 +12,7 @@ import InventoryForm from "./components/InventoryForm";
 import CategoryPage from "./components/AddCategory";
 import Shoppinglist from "./components/ShoppingList";
 import Navbar from "./components/Navbar";
+import Chatbot from "./components/ChatBot";
 
 // Import pages
 import HomePage from "./pages/Home";
@@ -45,6 +46,7 @@ const App = () => {
           <Route path="/AdminDashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
           <Route path="/Support" element={isAuthenticated ? <Support /> : <Navigate to="/login" />} />
           <Route path="/Footer" element={isAuthenticated ? <Footer /> : <Navigate to="/login" />} />
+          <Route path="/Chatbot" element={isAuthenticated ? <Chatbot /> : <Navigate to="/" />} />
 
           {/* Admin-only route */}
           <Route path="/admin" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/login" />} />
