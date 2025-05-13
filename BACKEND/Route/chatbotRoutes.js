@@ -8,6 +8,10 @@ dotenv.config();
 
 const router = express.Router();
 
+// Organization information
+const email = 'myhome@stock.com';
+const name = 'MYHOME STOCK';
+
 // JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -25,6 +29,24 @@ router.post('/chat', authenticateToken, async (req, res) => {
   const lowerMsg = message.toLowerCase();
 
   try {
+    // === Intent: Organization Name ===
+    if (
+      lowerMsg.includes('name') ||
+      lowerMsg.includes('who are you')
+    ) {
+      return res.json({ reply: name });
+    }
+
+    // === Intent: Organization Email ===
+    if (
+      lowerMsg.includes('email') ||
+      lowerMsg.includes('your email') ||
+      lowerMsg.includes('company email') ||
+      lowerMsg.includes('contact email')
+    ) {
+      return res.json({ reply: email });
+    }
+
     // === Intent: Low Stock ===
     if (
       lowerMsg.includes('low stock') ||

@@ -266,13 +266,7 @@ const Navbar = () => {
                       >
                         <User size={16} className="me-2" /> Profile
                       </Link>
-                      <Link 
-                        to="/settings" 
-                        className="d-block px-3 py-2 text-dark text-decoration-none hover-bg-light"
-                        onClick={() => setShowDropdown(false)}
-                      >
-                        <Settings size={16} className="me-2" /> Settings
-                      </Link>
+                      
                       <div className="border-top my-1"></div>
                       <button 
                         className="d-block w-100 text-start px-3 py-2 text-danger bg-transparent border-0 hover-bg-light"

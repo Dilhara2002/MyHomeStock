@@ -14,6 +14,8 @@ import Shoppinglist from "./components/ShoppingList";
 import Navbar from "./components/Navbar";
 import Chatbot from "./components/ChatBot";
 
+
+
 // Import pages
 import HomePage from "./pages/Home";
 import Settings from "./pages/Settings";
