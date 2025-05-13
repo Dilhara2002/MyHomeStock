@@ -291,7 +291,7 @@ const CategoryPage = () => {
               }}
             >
               <FaFilePdf />
-              {isGeneratingReport ? "Generating..." : "Export PDF"}
+              {isGeneratingReport ? "Generating..." : "Export Report"}
             </button>
           </div>
         </div>
