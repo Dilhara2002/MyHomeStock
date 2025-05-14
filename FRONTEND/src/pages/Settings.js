@@ -1,352 +1,398 @@
-import { useState } from "react";
-import { FiUser, FiLock, FiBell, FiMoon, FiSun, FiChevronRight } from "react-icons/fi";
+import React, { useState } from 'react';
 
-export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile");
-  const [darkMode, setDarkMode] = useState(false);
-
-  const tabs = [
-    { id: "profile", icon: <FiUser />, label: "Profile" },
-    { id: "security", icon: <FiLock />, label: "Security" },
-    { id: "notifications", icon: <FiBell />, label: "Notifications" },
-    { id: "appearance", icon: darkMode ? <FiMoon /> : <FiSun />, label: "Appearance" },
-  ];
-
-  return (
-    <div className={`flex h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"}`}>
-      {/* Sidebar Navigation */}
-      <div className={`w-64 p-4 border-r ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
-        <h2 className="text-xl font-bold mb-6">Settings</h2>
-        <nav>
-          <ul className="space-y-2">
-            {tabs.map((tab) => (
-              <li key={tab.id}>
-                <button
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-between w-full p-3 rounded-lg transition-colors ${
-                    activeTab === tab.id
-                      ? darkMode
-                        ? "bg-blue-600 text-white"
-                        : "bg-blue-100 text-blue-700"
-                      : darkMode
-                      ? "hover:bg-gray-800"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <span className="mr-3">{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </div>
-                  <FiChevronRight />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 p-8 overflow-auto">
-        {activeTab === "profile" && (
-          <ProfileSection darkMode={darkMode} />
-        )}
-
-        {activeTab === "security" && (
-          <SecuritySection darkMode={darkMode} />
-        )}
-
-        {activeTab === "notifications" && (
-          <NotificationSection darkMode={darkMode} />
-        )}
-
-        {activeTab === "appearance" && (
-          <AppearanceSection 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Profile Section Component
-function ProfileSection({ darkMode }) {
-  const [formData, setFormData] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    bio: "Product designer and developer",
+const Settings = () => {
+  // State for form fields
+  const [userData, setUserData] = useState({
+    username: 'current_user',
+    email: 'user@example.com',
+    password: ''
   });
 
-  const handleChange = (e) => {
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    expiryAlerts: true,
+    lowStock: true,
+    weeklySummary: false,
+    notificationTime: 'Afternoon (1:00 PM)'
+  });
+
+  const [displayPrefs, setDisplayPrefs] = useState({
+    theme: 'Light',
+    itemsPerPage: '25',
+    compactView: false
+  });
+
+  // Handler functions
+  const handleUserDataChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setUserData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNotificationChange = (e) => {
+    const { name, checked } = e.target;
+    setNotificationPrefs(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleDisplayChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setDisplayPrefs(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission here
+    console.log('Settings saved:', { userData, notificationPrefs, displayPrefs });
+  };
+
+  // Styles
+  const styles = {
+    container: {
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '20px',
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      backgroundColor: '#f5f7fa',
+      color: '#333333'
+    },
+    header: {
+      marginBottom: '30px'
+    },
+    title: {
+      color: '#4a6fa5',
+      marginBottom: '5px'
+    },
+    subtitle: {
+      color: '#6b8cae',
+      fontSize: '1.1rem',
+      marginTop: '0'
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+      gap: '20px'
+    },
+    card: {
+      backgroundColor: '#ffffff',
+      borderRadius: '8px',
+      padding: '20px',
+      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+      transition: 'transform 0.2s'
+    },
+    cardHover: {
+      transform: 'translateY(-5px)'
+    },
+    cardTitle: {
+      color: '#4a6fa5',
+      fontSize: '1.2rem',
+      marginTop: '0',
+      marginBottom: '15px',
+      borderBottom: '1px solid #eee',
+      paddingBottom: '10px'
+    },
+    formGroup: {
+      marginBottom: '15px'
+    },
+    label: {
+      display: 'block',
+      marginBottom: '5px',
+      fontWeight: '500'
+    },
+    input: {
+      width: '100%',
+      padding: '8px 12px',
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      fontSize: '1rem'
+    },
+    checkboxGroup: {
+      display: 'flex',
+      alignItems: 'center',
+      marginBottom: '10px'
+    },
+    checkbox: {
+      width: 'auto',
+      marginRight: '10px'
+    },
+    button: {
+      backgroundColor: '#4a6fa5',
+      color: 'white',
+      border: 'none',
+      padding: '10px 15px',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      fontSize: '1rem',
+      transition: 'background-color 0.2s'
+    },
+    buttonHover: {
+      backgroundColor: '#6b8cae'
+    },
+    fullWidthButton: {
+      width: '100%',
+      marginBottom: '10px'
+    },
+    dangerButton: {
+      backgroundColor: '#e74c3c'
+    },
+    dangerButtonHover: {
+      backgroundColor: '#c0392b'
+    },
+    logoutButton: {
+      marginTop: '15px'
+    },
+    footer: {
+      marginTop: '40px',
+      textAlign: 'center',
+      color: '#6b8cae',
+      fontSize: '0.9rem'
+    }
   };
 
   return (
-    <div>
-      <h3 className="text-2xl font-bold mb-6">Profile Settings</h3>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>MyHomeStock Settings</h1>
+        <p style={styles.subtitle}>Customize your inventory management experience</p>
+      </header>
       
-      <div className="max-w-lg space-y-6">
-        <div>
-          <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Name</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className={`w-full p-3 rounded-lg border ${
-              darkMode
-                ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                : "bg-white border-gray-300 focus:border-blue-400"
-            }`}
-          />
-        </div>
-
-        <div>
-          <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Email</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`w-full p-3 rounded-lg border ${
-              darkMode
-                ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                : "bg-white border-gray-300 focus:border-blue-400"
-            }`}
-          />
-        </div>
-
-        <div>
-          <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Bio</label>
-          <textarea
-            name="bio"
-            value={formData.bio}
-            onChange={handleChange}
-            rows="4"
-            className={`w-full p-3 rounded-lg border ${
-              darkMode
-                ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                : "bg-white border-gray-300 focus:border-blue-400"
-            }`}
-          />
-        </div>
-
-        <button
-          className={`px-6 py-3 rounded-lg font-medium ${
-            darkMode
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-blue-500 hover:bg-blue-600 text-white"
-          }`}
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Security Section Component
-function SecuritySection({ darkMode }) {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  return (
-    <div>
-      <h3 className="text-2xl font-bold mb-6">Security Settings</h3>
-      
-      <div className="max-w-lg space-y-6">
-        <div>
-          <h4 className="text-lg font-semibold mb-4">Change Password</h4>
-          
-          <div className="space-y-4">
-            <div>
-              <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className={`w-full p-3 rounded-lg border ${
-                  darkMode
-                    ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                    : "bg-white border-gray-300 focus:border-blue-400"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={`w-full p-3 rounded-lg border ${
-                  darkMode
-                    ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                    : "bg-white border-gray-300 focus:border-blue-400"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className={`block mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Confirm New Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`w-full p-3 rounded-lg border ${
-                  darkMode
-                    ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                    : "bg-white border-gray-300 focus:border-blue-400"
-                }`}
-              />
-            </div>
+      <form onSubmit={handleSubmit} style={styles.grid}>
+        {/* Account Settings */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Account Settings</h2>
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="username">Username</label>
+            <input 
+              type="text" 
+              id="username" 
+              name="username"
+              value={userData.username}
+              onChange={handleUserDataChange}
+              style={styles.input}
+            />
           </div>
-        </div>
-
-        <button
-          className={`px-6 py-3 rounded-lg font-medium ${
-            darkMode
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-blue-500 hover:bg-blue-600 text-white"
-          }`}
-        >
-          Update Password
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Notification Section Component
-function NotificationSection({ darkMode }) {
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    newsletter: true,
-  });
-
-  const toggleNotification = (type) => {
-    setNotifications(prev => ({ ...prev, [type]: !prev[type] }));
-  };
-
-  return (
-    <div>
-      <h3 className="text-2xl font-bold mb-6">Notification Settings</h3>
-      
-      <div className="max-w-lg space-y-6">
-        <div className={`p-4 rounded-lg ${
-          darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-        }`}>
-          <h4 className="font-semibold mb-4">Notification Preferences</h4>
-          
-          <div className="space-y-3">
-            {Object.entries(notifications).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between">
-                <span className="capitalize">{key} notifications</span>
-                <button
-                  onClick={() => toggleNotification(key)}
-                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                    value
-                      ? darkMode
-                        ? "bg-blue-600"
-                        : "bg-blue-500"
-                      : darkMode
-                      ? "bg-gray-700"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`block w-4 h-4 rounded-full bg-white transform transition-transform ${
-                      value ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="email">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email"
+              value={userData.email}
+              onChange={handleUserDataChange}
+              style={styles.input}
+            />
           </div>
-        </div>
-
-        <button
-          className={`px-6 py-3 rounded-lg font-medium ${
-            darkMode
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-blue-500 hover:bg-blue-600 text-white"
-          }`}
-        >
-          Save Preferences
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Appearance Section Component
-function AppearanceSection({ darkMode, setDarkMode }) {
-  const themes = [
-    { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
-    { id: "dark", name: "Dark", bg: "bg-gray-900", text: "text-white" },
-    { id: "system", name: "System", bg: "bg-gray-100", text: "text-gray-900" },
-  ];
-
-  return (
-    <div>
-      <h3 className="text-2xl font-bold mb-6">Appearance Settings</h3>
-      
-      <div className="max-w-lg space-y-6">
-        <div>
-          <h4 className="text-lg font-semibold mb-4">Theme</h4>
-          
-          <div className="grid grid-cols-3 gap-4">
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => {
-                  if (theme.id === "dark") setDarkMode(true);
-                  else setDarkMode(false);
-                }}
-                className={`p-4 rounded-lg border-2 ${
-                  (darkMode && theme.id === "dark") || (!darkMode && theme.id === "light")
-                    ? "border-blue-500"
-                    : darkMode
-                    ? "border-gray-700"
-                    : "border-gray-200"
-                }`}
-              >
-                <div className={`${theme.bg} ${theme.text} p-8 rounded`}>
-                  <span>{theme.name}</span>
-                </div>
-              </button>
-            ))}
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="password">Change Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password"
+              value={userData.password}
+              onChange={handleUserDataChange}
+              placeholder="Enter new password"
+              style={styles.input}
+            />
           </div>
+          <button 
+            type="button" 
+            onClick={handleSubmit}
+            style={styles.button}
+          >
+            Update Account
+          </button>
         </div>
-
-        <div className={`p-4 rounded-lg ${
-          darkMode ? "bg-gray-800" : "bg-white border border-gray-200"
-        }`}>
-          <h4 className="font-semibold mb-4">Dark Mode</h4>
-          
-          <div className="flex items-center justify-between">
-            <span>Toggle dark mode</span>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                darkMode
-                  ? "bg-blue-600"
-                  : "bg-gray-300"
-              }`}
+        
+        {/* Notification Preferences */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Notification Preferences</h2>
+          <div style={styles.checkboxGroup}>
+            <input 
+              type="checkbox" 
+              id="expiry-alerts" 
+              name="expiryAlerts"
+              checked={notificationPrefs.expiryAlerts}
+              onChange={handleNotificationChange}
+              style={styles.checkbox}
+            />
+            <label style={styles.label} htmlFor="expiry-alerts">Expiry Alerts</label>
+          </div>
+          <div style={styles.checkboxGroup}>
+            <input 
+              type="checkbox" 
+              id="low-stock" 
+              name="lowStock"
+              checked={notificationPrefs.lowStock}
+              onChange={handleNotificationChange}
+              style={styles.checkbox}
+            />
+            <label style={styles.label} htmlFor="low-stock">Low Stock Warnings</label>
+          </div>
+          <div style={styles.checkboxGroup}>
+            <input 
+              type="checkbox" 
+              id="weekly-summary" 
+              name="weeklySummary"
+              checked={notificationPrefs.weeklySummary}
+              onChange={handleNotificationChange}
+              style={styles.checkbox}
+            />
+            <label style={styles.label} htmlFor="weekly-summary">Weekly Summary Report</label>
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="notification-time">Notification Time</label>
+            <select 
+              id="notification-time"
+              name="notificationTime"
+              value={notificationPrefs.notificationTime}
+              onChange={(e) => setNotificationPrefs(prev => ({
+                ...prev,
+                notificationTime: e.target.value
+              }))}
+              style={styles.input}
             >
-              <span
-                className={`block w-4 h-4 rounded-full bg-white transform transition-transform ${
-                  darkMode ? "translate-x-6" : "translate-x-0"
-                }`}
-              />
+              <option>Morning (8:00 AM)</option>
+              <option>Afternoon (1:00 PM)</option>
+              <option>Evening (6:00 PM)</option>
+            </select>
+          </div>
+          <button 
+            type="button" 
+            onClick={handleSubmit}
+            style={styles.button}
+          >
+            Save Preferences
+          </button>
+        </div>
+        
+        {/* Display Preferences */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Display Preferences</h2>
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="theme">Theme</label>
+            <select 
+              id="theme"
+              name="theme"
+              value={displayPrefs.theme}
+              onChange={handleDisplayChange}
+              style={styles.input}
+            >
+              <option>Light</option>
+              <option>Dark</option>
+              <option>System Default</option>
+            </select>
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label} htmlFor="items-per-page">Items Per Page</label>
+            <select 
+              id="items-per-page"
+              name="itemsPerPage"
+              value={displayPrefs.itemsPerPage}
+              onChange={handleDisplayChange}
+              style={styles.input}
+            >
+              <option>10</option>
+              <option>25</option>
+              <option>50</option>
+              <option>100</option>
+            </select>
+          </div>
+          <div style={styles.checkboxGroup}>
+            <input 
+              type="checkbox" 
+              id="compact-view" 
+              name="compactView"
+              checked={displayPrefs.compactView}
+              onChange={handleDisplayChange}
+              style={styles.checkbox}
+            />
+            <label style={styles.label} htmlFor="compact-view">Compact Item View</label>
+          </div>
+          <button 
+            type="button" 
+            onClick={handleSubmit}
+            style={styles.button}
+          >
+            Save Display Settings
+          </button>
+        </div>
+        
+        {/* Data Management */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Data Management</h2>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Export Data</label>
+            <button 
+              type="button" 
+              style={{ ...styles.button, ...styles.fullWidthButton }}
+            >
+              Export to CSV
+            </button>
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Import Data</label>
+            <input type="file" id="import-file" style={styles.input} />
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Reset Data</label>
+            <button 
+              type="button" 
+              style={{ 
+                ...styles.button, 
+                ...styles.fullWidthButton, 
+                ...styles.dangerButton 
+              }}
+            >
+              Reset All Inventory
             </button>
           </div>
         </div>
+        
+        {/* Support */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>Support</h2>
+          <p>Need help with MyHomeStock?</p>
+          <button 
+            type="button" 
+            style={{ ...styles.button, ...styles.fullWidthButton }}
+          >
+            Contact Support
+          </button>
+          <button 
+            type="button" 
+            style={{ ...styles.button, ...styles.fullWidthButton }}
+          >
+            View Help Center
+          </button>
+          <button 
+            type="button" 
+            style={{ ...styles.button, ...styles.fullWidthButton }}
+          >
+            Check for Updates
+          </button>
+        </div>
+        
+        {/* About */}
+        <div style={styles.card}>
+          <h2 style={styles.cardTitle}>About MyHomeStock</h2>
+          <p><strong>Version:</strong> 2.1.4</p>
+          <p><strong>Last Updated:</strong> May 10, 2025</p>
+          <p><strong>Terms of Service</strong></p>
+          <p><strong>Privacy Policy</strong></p>
+          <button 
+            type="button" 
+            style={{ ...styles.button, ...styles.fullWidthButton, ...styles.logoutButton }}
+          >
+            Log Out
+          </button>
+        </div>
+      </form>
+      
+      <div style={styles.footer}>
+        <p>© 2025 MyHomeStock. All rights reserved.</p>
       </div>
     </div>
   );
-}
+};
+
+export default Settings;
