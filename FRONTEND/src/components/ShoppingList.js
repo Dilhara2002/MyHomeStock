@@ -1,10 +1,10 @@
-// aluth bosa - Shopping List Component with Search and Report Generation
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import {
   FaCartPlus,
   FaTrashAlt,
@@ -15,10 +15,8 @@ import {
   FaTimesCircle,
   FaPlusCircle,
   FaSearch,
-  FaFileExport
+  FaFileExport,
 } from "react-icons/fa";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 
 const ShoppingList = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -61,24 +59,19 @@ const ShoppingList = () => {
 
       try {
         setLoading(true);
-        
         const inventoryResponse = await axios.get("http://localhost:5002/inventory", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setInventoryItems(inventoryResponse.data);
 
-        const shoppingListResponse = await axios.get(
-          "http://localhost:5002/shopping-list",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const shoppingListResponse = await axios.get("http://localhost:5002/shopping-list", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setShoppingList(shoppingListResponse.data);
 
-        const autoAddedResponse = await axios.get(
-          "http://localhost:5002/shopping-list/auto-added",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        // Ensure autoAddedItems is always an array
+        const autoAddedResponse = await axios.get("http://localhost:5002/shopping-list/auto-added", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setAutoAddedItems(Array.isArray(autoAddedResponse.data) ? autoAddedResponse.data : []);
       } catch (error) {
         if (error.response?.status === 401) {
@@ -144,17 +137,14 @@ const ShoppingList = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const shoppingListResponse = await axios.get(
-        "http://localhost:5002/shopping-list",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const shoppingListResponse = await axios.get("http://localhost:5002/shopping-list", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setShoppingList(shoppingListResponse.data);
 
-      const autoAddedResponse = await axios.get(
-        "http://localhost:5002/shopping-list/auto-added",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // Ensure autoAddedItems is always an array
+      const autoAddedResponse = await axios.get("http://localhost:5002/shopping-list/auto-added", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setAutoAddedItems(Array.isArray(autoAddedResponse.data) ? autoAddedResponse.data : []);
 
       showSuccess(response.data.message || "Low stock items added successfully!");
@@ -190,23 +180,21 @@ const ShoppingList = () => {
       await axios.put(
         `http://localhost:5002/shopping-list/update/${editingItem.name}`,
         { quantity: editQuantity },
-        { 
-          headers: { 
+        {
+          headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          } 
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      setShoppingList(prev => ({
+      setShoppingList((prev) => ({
         ...prev,
-        items: prev.items.map(item => 
-          item.name === editingItem.name 
-            ? { ...item, quantity: editQuantity } 
-            : item
-        )
+        items: prev.items.map((item) =>
+          item.name === editingItem.name ? { ...item, quantity: editQuantity } : item
+        ),
       }));
-      
+
       cancelEditing();
       showSuccess("Item quantity updated successfully!");
     } catch (error) {
@@ -233,10 +221,9 @@ const ShoppingList = () => {
         return;
       }
 
-      const response = await axios.delete(
-        `http://localhost:5002/shopping-list/remove/${itemToDelete}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.delete(`http://localhost:5002/shopping-list/remove/${itemToDelete}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setShoppingList(response.data.shoppingList);
       setShowDeleteModal(false);
@@ -252,88 +239,69 @@ const ShoppingList = () => {
     }
   };
 
-  // Filter shopping list items based on search term
-  const filteredItems = Array.isArray(shoppingList.items) ? 
-    shoppingList.items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) : 
-    [];
+  const filteredItems = Array.isArray(shoppingList.items)
+    ? shoppingList.items.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : [];
 
-  // Filter auto-added items based on search term
-  const filteredAutoAddedItems = Array.isArray(autoAddedItems) ? 
-    autoAddedItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) : 
-    [];
+  const filteredAutoAddedItems = Array.isArray(autoAddedItems)
+    ? autoAddedItems.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : [];
 
-  // Generate PDF report
-const generateReport = () => {
-  // Initialize jsPDF with autoTable plugin
-  const doc = new jsPDF();
-  
-  // Import autoTable plugin (this is crucial)
-  doc.autoTable = require('jspdf-autotable');
+  const generateReport = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.setTextColor(0, 188, 212);
+    doc.text("Shopping List Report", 105, 20, { align: "center" });
 
-  // Report title
-  doc.setFontSize(20);
-  doc.setTextColor(0, 188, 212);
-  doc.text("Shopping List Report", 105, 20, { align: 'center' });
-  
-  // Report date
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
-  
-  let finalY = 40; // Track the Y position for the next section
-  
-  // Auto-added items section
-  if (filteredAutoAddedItems.length > 0) {
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Auto-Added Low Stock Items", 14, 45);
-    
-    const autoAddedData = filteredAutoAddedItems.map(item => [
-      item.name,
-      item.quantity
-    ]);
-    
-    doc.autoTable({
-      startY: 50,
-      head: [['Item Name', 'Quantity']],
-      body: autoAddedData,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [0, 188, 212],
-        textColor: 255
-      }
-    });
-    
-    finalY = doc.lastAutoTable.finalY + 15;
-  }
-  
-  // Manual items section
-  if (filteredItems.length > 0) {
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Manual Shopping List Items", 14, finalY);
-    
-    const manualItemsData = filteredItems.map(item => [
-      item.name,
-      item.quantity
-    ]);
-    
-    doc.autoTable({
-      startY: finalY + 5,
-      head: [['Item Name', 'Quantity']],
-      body: manualItemsData,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [76, 175, 80],
-        textColor: 255
-      }
-    });
-  }
-  
-  // Save the PDF
-  doc.save(`shopping-list-report-${new Date().toISOString().slice(0, 10)}.pdf`);
-  showSuccess("Report generated successfully!");
-};
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: "center" });
+
+    let finalY = 40;
+
+    if (filteredAutoAddedItems.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Auto-Added Low Stock Items", 14, 45);
+
+      const autoAddedData = filteredAutoAddedItems.map((item) => [item.name, item.quantity]);
+
+      doc.autoTable({
+        startY: 50,
+        head: [["Item Name", "Quantity"]],
+        body: autoAddedData,
+        theme: "grid",
+        headStyles: {
+          fillColor: [0, 188, 212],
+          textColor: 255,
+        },
+      });
+
+      finalY = doc.lastAutoTable.finalY + 15;
+    }
+
+    if (filteredItems.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Manual Shopping List Items", 14, finalY);
+
+      const manualItemsData = filteredItems.map((item) => [item.name, item.quantity]);
+
+      doc.autoTable({
+        startY: finalY + 5,
+        head: [["Item Name", "Quantity"]],
+        body: manualItemsData,
+        theme: "grid",
+        headStyles: {
+          fillColor: [76, 175, 80],
+          textColor: 255,
+        },
+      });
+    }
+
+    doc.save(`shopping-list-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    // showSuccess("Report generated successfully!");
+  };
 
   if (loading) {
     return (
@@ -346,30 +314,42 @@ const generateReport = () => {
   }
 
   return (
-    <div className="container mt-5" style={{
-      maxWidth: "1200px",
-      margin: "0 auto",
-      fontFamily: "'Poppins', sans-serif",
-      animation: "fadeIn 0.5s ease-in-out"
-    }}>
-      <div className="card shadow-lg" style={{
-        borderRadius: "15px",
-        border: "none",
-        overflow: "hidden"
-      }}>
-        <div className="card-header" style={{
-          background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-          color: "white",
+    <div
+      className="container mt-5"
+      style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        fontFamily: "'Poppins', sans-serif",
+        animation: "fadeIn 0.5s ease-in-out",
+      }}
+    >
+      <div
+        className="card shadow-lg"
+        style={{
+          borderRadius: "15px",
           border: "none",
-          padding: "25px 30px",
-          position: "relative"
-        }}>
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className="card-header"
+          style={{
+            background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
+            color: "white",
+            border: "none",
+            padding: "25px 30px",
+            position: "relative",
+          }}
+        >
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="m-0" style={{
-              fontWeight: "600",
-              fontSize: "28px",
-              letterSpacing: "0.5px"
-            }}>
+            <h2
+              className="m-0"
+              style={{
+                fontWeight: "600",
+                fontSize: "28px",
+                letterSpacing: "0.5px",
+              }}
+            >
               <FaShoppingCart className="me-3" />
               Shopping List
             </h2>
@@ -385,7 +365,7 @@ const generateReport = () => {
                   background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
                   border: "none",
                   color: "white",
-                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
                 }}
               >
                 <FaPlusCircle className="me-2" />
@@ -399,14 +379,14 @@ const generateReport = () => {
                   padding: "10px 20px",
                   fontSize: "14px",
                   fontWeight: "500",
-                  background: "linear-gradient(135deg, #FF9800 0%, #F57C00 100%)",
+                  background: "linear-gradient(135deg,rgb(248, 245, 240) 0%,rgb(234, 234, 233) 100%)",
                   border: "none",
-                  color: "white",
-                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+                  color: "black",
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
                 }}
               >
                 <FaFileExport className="me-2" />
-                Generate Report
+                Export Report
               </button>
             </div>
           </div>
@@ -414,20 +394,26 @@ const generateReport = () => {
 
         <div className="card-body p-4">
           {/* Search Bar */}
-          <div className="card mb-4" style={{
-            borderRadius: "10px",
-            border: "none",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-          }}>
+          <div
+            className="card mb-4"
+            style={{
+              borderRadius: "10px",
+              border: "none",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+            }}
+          >
             <div className="card-body">
               <div className="input-group">
-                <span className="input-group-text" style={{
-                  background: "white",
-                  borderRight: "none",
-                  border: "2px solid #e0e0e0",
-                  borderTopLeftRadius: "8px",
-                  borderBottomLeftRadius: "8px"
-                }}>
+                <span
+                  className="input-group-text"
+                  style={{
+                    background: "white",
+                    borderRight: "none",
+                    border: "2px solid #e0e0e0",
+                    borderTopLeftRadius: "8px",
+                    borderBottomLeftRadius: "8px",
+                  }}
+                >
                   <FaSearch />
                 </span>
                 <input
@@ -441,7 +427,7 @@ const generateReport = () => {
                     borderRadius: "0 8px 8px 0",
                     border: "2px solid #e0e0e0",
                     padding: "12px 15px",
-                    fontSize: "15px"
+                    fontSize: "15px",
                   }}
                 />
               </div>
@@ -449,16 +435,23 @@ const generateReport = () => {
           </div>
 
           {/* Add Item Form */}
-          <div className="card mb-4" style={{
-            borderRadius: "10px",
-            border: "none",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-          }}>
+          <div
+            className="card mb-4"
+            style={{
+              borderRadius: "10px",
+              border: "none",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+            }}
+          >
             <div className="card-body">
-              <h5 className="mb-4" style={{ fontWeight: "600" }}>Add Item to Shopping List</h5>
+              <h5 className="mb-4" style={{ fontWeight: "600" }}>
+                Add Item to Shopping List
+              </h5>
               <div className="row g-3">
                 <div className="col-md-6">
-                  <label className="form-label" style={{ fontWeight: "600" }}>Select Item</label>
+                  <label className="form-label" style={{ fontWeight: "600" }}>
+                    Select Item
+                  </label>
                   <select
                     className="form-select"
                     value={selectedItem}
@@ -467,7 +460,7 @@ const generateReport = () => {
                       borderRadius: "8px",
                       border: "2px solid #e0e0e0",
                       padding: "10px 15px",
-                      fontSize: "15px"
+                      fontSize: "15px",
                     }}
                   >
                     <option value="">Select an Item</option>
@@ -479,7 +472,9 @@ const generateReport = () => {
                   </select>
                 </div>
                 <div className="col-md-3">
-                  <label className="form-label" style={{ fontWeight: "600" }}>Quantity</label>
+                  <label className="form-label" style={{ fontWeight: "600" }}>
+                    Quantity
+                  </label>
                   <input
                     type="number"
                     className="form-control"
@@ -487,10 +482,11 @@ const generateReport = () => {
                     onChange={(e) => setQuantity(Number(e.target.value))}
                     min="1"
                     style={{
+                      maxWidth: "100%",
                       borderRadius: "8px",
                       border: "2px solid #e0e0e0",
                       padding: "10px 15px",
-                      fontSize: "15px"
+                      fontSize: "15px",
                     }}
                   />
                 </div>
@@ -507,7 +503,7 @@ const generateReport = () => {
                       background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
                       border: "none",
                       boxShadow: "0 4px 10px rgba(0, 188, 212, 0.3)",
-                      color: "white"
+                      color: "white",
                     }}
                   >
                     <FaCartPlus className="me-2" />
@@ -520,11 +516,14 @@ const generateReport = () => {
 
           {/* Auto-Added Items Section */}
           {filteredAutoAddedItems.length > 0 && (
-            <div className="card mb-4" style={{
-              borderRadius: "10px",
-              border: "none",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-            }}>
+            <div
+              className="card mb-4"
+              style={{
+                borderRadius: "10px",
+                border: "none",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+              }}
+            >
               <div className="card-body">
                 <h5 className="mb-3" style={{ fontWeight: "600" }}>
                   <FaPlusCircle className="me-2" />
@@ -533,41 +532,64 @@ const generateReport = () => {
                 <div className="table-responsive">
                   <table className="table table-hover mb-0">
                     <thead>
-                      <tr style={{
-                        backgroundColor: "#f8f9fa",
-                        borderBottom: "2px solid #e9ecef"
-                      }}>
-                        <th scope="col" style={{
-                          padding: "15px 20px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                          color: "#495057"
-                        }}>Name</th>
-                        <th scope="col" style={{
-                          padding: "15px 20px",
-                          fontSize: "15px",
-                          fontWeight: "600",
-                          color: "#495057"
-                        }}>Quantity</th>
+                      <tr
+                        style={{
+                          backgroundColor: "#f8f9fa",
+                          borderBottom: "2px solid #e9ecef",
+                        }}
+                      >
+                        <th
+                          scope="col"
+                          style={{
+                            padding: "15px 20px",
+                            fontSize: "15px",
+                            fontWeight: "600",
+                            color: "#495057",
+                          }}
+                        >
+                          Name
+                        </th>
+                        <th
+                          scope="col"
+                          style={{
+                            padding: "15px 20px",
+                            fontSize: "15px",
+                            fontWeight: "600",
+                            color: "#495057",
+                          }}
+                        >
+                          Quantity
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredAutoAddedItems.map((item, index) => (
-                        <tr key={`auto-${index}`} style={{
-                          transition: "background-color 0.2s",
-                          borderBottom: "1px solid #e9ecef"
-                        }}>
-                          <td style={{
-                            padding: "15px 20px",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            verticalAlign: "middle"
-                          }}>{item.name}</td>
-                          <td style={{
-                            padding: "15px 20px",
-                            fontSize: "15px",
-                            verticalAlign: "middle"
-                          }}>{item.quantity}</td>
+                        <tr
+                          key={`auto-${index}`}
+                          style={{
+                            transition: "background-color 0.2s",
+                            borderBottom: "1px solid #e9ecef",
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "15px 20px",
+                              fontSize: "15px",
+                              fontWeight: "500",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {item.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: "15px 20px",
+                              fontSize: "15px",
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {item.quantity}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -578,75 +600,113 @@ const generateReport = () => {
           )}
 
           {/* Shopping List Items */}
-          <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>Your Shopping List</h5>
+          <h5 className="fw-bold mb-3" style={{ fontSize: "20px" }}>
+            Your Shopping List
+          </h5>
           {filteredItems.length === 0 ? (
-            <div className="alert alert-info" style={{
-              borderRadius: "10px",
-              border: "none",
-              backgroundColor: "#e3f2fd",
-              color: "#0d47a1",
-              padding: "15px",
-              textAlign: "center"
-            }}>
+            <div
+              className="alert alert-info"
+              style={{
+                borderRadius: "10px",
+                border: "none",
+                backgroundColor: "#e3f2fd",
+                color: "#0d47a1",
+                padding: "15px",
+                textAlign: "center",
+              }}
+            >
               <FaShoppingCart size={24} className="me-2" />
               {searchTerm ? "No matching items found" : "Your shopping list is empty"}
             </div>
           ) : (
-            <div className="table-responsive" style={{
-              borderRadius: "10px",
-              overflow: "hidden",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-            }}>
+            <div
+              className="table-responsive"
+              style={{
+                borderRadius: "10px",
+                overflow: "hidden",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+              }}
+            >
               <table className="table table-hover mb-0">
                 <thead>
-                  <tr style={{
-                    backgroundColor: "#f8f9fa",
-                    borderBottom: "2px solid #e9ecef"
-                  }}>
-                    <th scope="col" style={{
-                      padding: "15px 20px",
-                      fontSize: "15px",
-                      fontWeight: "600",
-                      color: "#495057"
-                    }}>Name</th>
-                    <th scope="col" style={{
-                      padding: "15px 20px",
-                      fontSize: "15px",
-                      fontWeight: "600",
-                      color: "#495057"
-                    }}>Quantity</th>
-                    <th scope="col" style={{
-                      padding: "15px 20px",
-                      fontSize: "15px",
-                      fontWeight: "600",
-                      color: "#495057",
-                      textAlign: "center"
-                    }}>Actions</th>
+                  <tr
+                    style={{
+                      backgroundColor: "#f8f9fa",
+                      borderBottom: "2px solid #e9ecef",
+                    }}
+                  >
+                    <th
+                      scope="col"
+                      style={{
+                        padding: "15px 20px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        color: "#495057",
+                      }}
+                    >
+                      Name
+                    </th>
+                    <th
+                      scope="col"
+                      style={{
+                        padding: "15px 20px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        color: "#495057",
+                      }}
+                    >
+                      Quantity
+                    </th>
+                    <th
+                      scope="col"
+                      style={{
+                        padding: "15px 20px",
+                        fontSize: "15px",
+                        fontWeight: "600",
+                        color: "#495057",
+                        textAlign: "center",
+                      }}
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.map((item, index) => (
-                    <tr key={index} style={{
-                      transition: "background-color 0.2s",
-                      borderBottom: "1px solid #e9ecef"
-                    }}>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        fontWeight: "500",
-                        verticalAlign: "middle"
-                      }}>{item.name}</td>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        verticalAlign: "middle"
-                      }}>{item.quantity}</td>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        verticalAlign: "middle",
-                        textAlign: "center"
-                      }}>
+                    <tr
+                      key={index}
+                      style={{
+                        transition: "background-color 0.2s",
+                        borderBottom: "1px solid #e9ecef",
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "15px 20px",
+                          fontSize: "15px",
+                          fontWeight: "500",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {item.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: "15px 20px",
+                          fontSize: "15px",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {item.quantity}
+                      </td>
+                      <td
+                        style={{
+                          padding: "15px 20px",
+                          fontSize: "15px",
+                          verticalAlign: "middle",
+                          textAlign: "center",
+                        }}
+                      >
                         <button
                           onClick={() => startEditing(item)}
                           className="btn btn-sm me-2"
@@ -658,7 +718,7 @@ const generateReport = () => {
                             fontSize: "14px",
                             fontWeight: "500",
                             border: "none",
-                            transition: "all 0.2s ease"
+                            transition: "all 0.2s ease",
                           }}
                         >
                           <FaEdit className="me-1" /> Edit
@@ -674,7 +734,7 @@ const generateReport = () => {
                             fontSize: "14px",
                             fontWeight: "500",
                             border: "none",
-                            transition: "all 0.2s ease"
+                            transition: "all 0.2s ease",
                           }}
                         >
                           <FaTrashAlt className="me-1" /> Delete
@@ -691,32 +751,44 @@ const generateReport = () => {
 
       {/* Edit Item Modal */}
       {editingItem && (
-        <div className="modal fade show" style={{
-          display: "block",
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1050,
-        }}>
+        <div
+          className="modal fade show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
+            <div
+              className="modal-content"
+              style={{
+                borderRadius: "15px",
+                border: "none",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className="modal-header"
+                style={{
+                  background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
+                  borderBottom: "none",
+                  padding: "20px 25px",
+                }}
+              >
+                <h5
+                  className="modal-title"
+                  style={{
+                    color: "white",
+                    fontWeight: "600",
+                    fontSize: "20px",
+                  }}
+                >
                   <FaEdit className="me-2" />
                   Edit Item Quantity
                 </h5>
@@ -729,7 +801,9 @@ const generateReport = () => {
               </div>
               <div className="modal-body p-4">
                 <div className="mb-3">
-                  <label className="form-label" style={{ fontWeight: "600" }}>Item: {editingItem.name}</label>
+                  <label className="form-label" style={{ fontWeight: "600" }}>
+                    Item: {editingItem.name}
+                  </label>
                   <input
                     type="number"
                     className="form-control"
@@ -740,15 +814,18 @@ const generateReport = () => {
                       borderRadius: "8px",
                       border: "2px solid #e0e0e0",
                       padding: "10px 15px",
-                      fontSize: "15px"
+                      fontSize: "15px",
                     }}
                   />
                 </div>
               </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px"
-              }}>
+              <div
+                className="modal-footer"
+                style={{
+                  borderTop: "1px solid #f0f0f0",
+                  padding: "15px",
+                }}
+              >
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
@@ -757,7 +834,7 @@ const generateReport = () => {
                     borderRadius: "8px",
                     padding: "10px 18px",
                     fontSize: "14px",
-                    fontWeight: "500"
+                    fontWeight: "500",
                   }}
                 >
                   Cancel
@@ -772,7 +849,7 @@ const generateReport = () => {
                     fontSize: "14px",
                     fontWeight: "500",
                     background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                    border: "none"
+                    border: "none",
                   }}
                 >
                   Save Changes
@@ -785,32 +862,44 @@ const generateReport = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="modal fade show" style={{
-          display: "block",
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1050,
-        }}>
+        <div
+          className="modal fade show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
+            <div
+              className="modal-content"
+              style={{
+                borderRadius: "15px",
+                border: "none",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className="modal-header"
+                style={{
+                  background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
+                  borderBottom: "none",
+                  padding: "20px 25px",
+                }}
+              >
+                <h5
+                  className="modal-title"
+                  style={{
+                    color: "white",
+                    fontWeight: "600",
+                    fontSize: "20px",
+                  }}
+                >
                   <FaExclamationTriangle className="me-2" />
                   Confirm Delete
                 </h5>
@@ -823,26 +912,33 @@ const generateReport = () => {
               </div>
               <div className="modal-body p-4" style={{ fontSize: "16px" }}>
                 <div className="text-center mb-3">
-                  <div style={{
-                    width: "70px",
-                    height: "70px",
-                    margin: "10px auto 20px",
-                    background: "rgba(233, 30, 99, 0.1)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}>
+                  <div
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      margin: "10px auto 20px",
+                      background: "rgba(233, 30, 99, 0.1)",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     <FaTrashAlt size={30} style={{ color: "#E91E63" }} />
                   </div>
                   <p className="mb-0">Are you sure you want to delete this item?</p>
-                  <p className="text-muted" style={{ fontSize: "14px" }}>This action cannot be undone.</p>
+                  <p className="text-muted" style={{ fontSize: "14px" }}>
+                    This action cannot be undone.
+                  </p>
                 </div>
               </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px"
-              }}>
+              <div
+                className="modal-footer"
+                style={{
+                  borderTop: "1px solid #f0f0f0",
+                  padding: "15px",
+                }}
+              >
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
@@ -851,7 +947,7 @@ const generateReport = () => {
                     borderRadius: "8px",
                     padding: "10px 18px",
                     fontSize: "14px",
-                    fontWeight: "500"
+                    fontWeight: "500",
                   }}
                 >
                   Cancel
@@ -866,7 +962,7 @@ const generateReport = () => {
                     fontSize: "14px",
                     fontWeight: "500",
                     background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                    border: "none"
+                    border: "none",
                   }}
                 >
                   Delete Item
@@ -879,34 +975,46 @@ const generateReport = () => {
 
       {/* Message Modal (Success/Error) */}
       {showMessageModal && (
-        <div className="modal fade show" style={{
-          display: "block",
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1050,
-        }}>
+        <div
+          className="modal fade show"
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1050,
+          }}
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: isSuccessMessage
-                  ? "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)"
-                  : "linear-gradient(135deg, #F44336 0%, #C62828 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
+            <div
+              className="modal-content"
+              style={{
+                borderRadius: "15px",
+                border: "none",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className="modal-header"
+                style={{
+                  background: isSuccessMessage
+                    ? "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)"
+                    : "linear-gradient(135deg, #F44336 0%, #C62828 100%)",
+                  borderBottom: "none",
+                  padding: "20px 25px",
+                }}
+              >
+                <h5
+                  className="modal-title"
+                  style={{
+                    color: "white",
+                    fontWeight: "600",
+                    fontSize: "20px",
+                  }}
+                >
                   {isSuccessMessage ? (
                     <FaCheckCircle className="me-2" />
                   ) : (
@@ -922,18 +1030,20 @@ const generateReport = () => {
                 ></button>
               </div>
               <div className="modal-body p-4 text-center" style={{ fontSize: "16px" }}>
-                <div style={{
-                  width: "70px",
-                  height: "70px",
-                  margin: "10px auto 20px",
-                  background: isSuccessMessage
-                    ? "rgba(76, 175, 80, 0.1)"
-                    : "rgba(244, 67, 54, 0.1)",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
+                <div
+                  style={{
+                    width: "70px",
+                    height: "70px",
+                    margin: "10px auto 20px",
+                    background: isSuccessMessage
+                      ? "rgba(76, 175, 80, 0.1)"
+                      : "rgba(244, 67, 54, 0.1)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   {isSuccessMessage ? (
                     <FaCheckCircle size={30} style={{ color: "#4CAF50" }} />
                   ) : (
@@ -944,11 +1054,14 @@ const generateReport = () => {
                   {message}
                 </p>
               </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px",
-                justifyContent: "center"
-              }}>
+              <div
+                className="modal-footer"
+                style={{
+                  borderTop: "1px solid #f0f0f0",
+                  padding: "15px",
+                  justifyContent: "center",
+                }}
+              >
                 <button
                   type="button"
                   className="btn"
@@ -962,7 +1075,7 @@ const generateReport = () => {
                       ? "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)"
                       : "linear-gradient(135deg, #F44336 0%, #C62828 100%)",
                     color: "white",
-                    border: "none"
+                    border: "none",
                   }}
                 >
                   OK
