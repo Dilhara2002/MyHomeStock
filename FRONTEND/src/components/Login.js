@@ -21,18 +21,26 @@ const Login = () => {
         password,
       });
 
+      // Store token and user data
       localStorage.setItem("token", response.data.token);
+      if (response.data.user) {
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      }
+
+      // Ensure state is updated before navigation
+      await new Promise(resolve => setTimeout(resolve, 0));
       
-      // Trigger navbar update in two ways:
-      // 1. Dispatch custom event
-      window.dispatchEvent(new CustomEvent("authChange"));
-      
-      // 2. Force refresh (alternative approach)
-      // window.location.reload();
-      
-      navigate("/Home");
+      // Dispatch auth change event
+      const authEvent = new CustomEvent("authChange", {
+        detail: { isAuthenticated: true }
+      });
+      window.dispatchEvent(authEvent);
+
+      // Navigate to home
+      navigate("/Home", { replace: true });
+
     } catch (error) {
-      setError(error.response?.data?.message || "Invalid credentials");
+      setError(error.response?.data?.message || "Login failed. Please try again.");
       console.error("Login Error:", error);
     } finally {
       setIsLoading(false);
