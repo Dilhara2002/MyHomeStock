@@ -96,7 +96,7 @@ const Profile = () => {
 
       setState({ ...state, success: "Profile updated!", isLoading: false });
       setSelectedFile(null);
-      fetchProfile(); // refresh image after update
+      window.location.reload(); // This will refresh the page after successful update
     } catch (error) {
       setState({
         ...state,

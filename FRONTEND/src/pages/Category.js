@@ -148,7 +148,7 @@ const CategoryList = ({ categories, onEdit, onDelete }) => (
   </div>
 );
 
-// CSS Styles (could be moved to a separate file)
+
 const styles = `
   .form-input, .form-textarea {
     border: 1px solid #ccc;

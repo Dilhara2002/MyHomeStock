@@ -214,7 +214,7 @@ const Navbar = () => {
               <div className="d-flex align-items-center">
                 <div className="position-relative me-3">
                   <Link to="/notifications" className="text-light">
-                    <Bell size={20} />
+                    {/* <Bell size={20} /> */}
                     {userData.notifications > 0 && (
                       <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                         {userData.notifications}

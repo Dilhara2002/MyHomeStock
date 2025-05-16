@@ -29,7 +29,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
   const lowerMsg = message.toLowerCase();
 
   try {
-    // === Intent: Organization Name ===
+    // Name 
     if (
       lowerMsg.includes('name') ||
       lowerMsg.includes('who are you')
@@ -37,7 +37,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
       return res.json({ reply: name });
     }
 
-    // === Intent: Organization Email ===
+    // Email
     if (
       lowerMsg.includes('email') ||
       lowerMsg.includes('your email') ||
@@ -47,7 +47,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
       return res.json({ reply: email });
     }
 
-    // === Intent: Low Stock ===
+    //Low Stock
     if (
       lowerMsg.includes('low stock') ||
       lowerMsg.includes('low count') ||
@@ -66,7 +66,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
       return res.json({ reply });
     }
 
-    // === Intent: Expiring Items ===
+    // Expiring 
     if (
       lowerMsg.includes('expire') ||
       lowerMsg.includes('expired') ||
