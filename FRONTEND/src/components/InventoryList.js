@@ -265,31 +265,27 @@ const InventoryList = () => {
                 onClick={generatePDF} 
                 className="btn btn-light" 
                 style={{
-                  borderRadius: "50px",
-                  padding: "12px 25px",
-                  fontWeight: "600",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                  transition: "all 0.3s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  backgroundColor: "white",
-                  color: "#00838F"
+                  borderRadius: "8px",
+                padding: "10px 15px",
+                fontSize: "14px",
+                fontWeight: "500",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
                 }}
               >
                 <FaFilePdf /> Generate Report
               </button>
               <Link to="/inventory/add" className="btn btn-light" style={{
-                borderRadius: "50px",
-                padding: "12px 25px",
-                fontWeight: "600",
-                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                transition: "all 0.3s ease",
+                borderRadius: "8px",
+                padding: "10px 15px",
+                fontSize: "14px",
+                fontWeight: "500",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                backgroundColor: "white",
-                color: "#00838F"
+                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
               }}>
                 <FaPlus /> Add New Item
               </Link>
@@ -440,7 +436,7 @@ const InventoryList = () => {
                     <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
                       {uniqueCategories.length}
                     </h3>
-                    <p className="mb-0" style={{ color: "#6c757d" }}>Categories</p>
+                    <p className="mb-0" style={{ color: "#00BCD4" }}>Categories</p>
                   </div>
                 </div>
               </div>

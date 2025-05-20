@@ -362,9 +362,9 @@ const ShoppingList = () => {
                   padding: "10px 20px",
                   fontSize: "14px",
                   fontWeight: "500",
-                  background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                  background: "linear-gradient(135deg,rgb(255, 255, 255) 0%,rgb(255, 255, 255) 100%)",
                   border: "none",
-                  color: "white",
+                  color: "black",
                   boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
                 }}
               >
@@ -379,7 +379,7 @@ const ShoppingList = () => {
                   padding: "10px 20px",
                   fontSize: "14px",
                   fontWeight: "500",
-                  background: "linear-gradient(135deg,rgb(248, 245, 240) 0%,rgb(234, 234, 233) 100%)",
+                  background: "linear-gradient(135deg,rgb(255, 255, 255) 0%,rgb(255, 255, 255) 100%)",
                   border: "none",
                   color: "black",
                   boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
