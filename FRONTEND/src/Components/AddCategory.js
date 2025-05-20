@@ -291,7 +291,7 @@ const CategoryPage = () => {
               }}
             >
               <FaFilePdf />
-              {isGeneratingReport ? "Generating..." : "Export Report"}
+              {isGeneratingReport ? "Generating..." : "Export PDF"}
             </button>
           </div>
         </div>
@@ -522,38 +522,40 @@ const CategoryPage = () => {
                         verticalAlign: "middle",
                         textAlign: "center"
                       }}>
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="btn btn-sm me-2"
-                          style={{
-                            backgroundColor: "#00BCD4",
-                            color: "white",
-                            padding: "7px 15px",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            border: "none",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
-                          <FaEdit className="me-1" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category._id)}
-                          className="btn btn-sm"
-                          style={{
-                            backgroundColor: "#E91E63",
-                            color: "white",
-                            padding: "7px 15px",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            border: "none",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
-                          <FaTrashAlt className="me-1" /> Delete
-                        </button>
+                        <div className="badge bg-secondary">
+                          <button
+                            onClick={() => handleEdit(category)}
+                            className="btn btn-sm me-2"
+                            style={{
+                              backgroundColor: "#00BCD4",
+                              color: "white",
+                              padding: "7px 15px",
+                              borderRadius: "6px",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              border: "none",
+                              transition: "all 0.2s ease"
+                            }}
+                          >
+                            <FaEdit className="me-1" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(category._id)}
+                            className="btn btn-sm"
+                            style={{
+                              backgroundColor: "#E91E63",
+                              color: "white",
+                              padding: "7px 15px",
+                              borderRadius: "6px",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              border: "none",
+                              transition: "all 0.2s ease"
+                            }}
+                          >
+                            <FaTrashAlt className="me-1" /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -913,7 +915,7 @@ const CategoryPage = () => {
           
           .form-control:focus, .form-select:focus {
             border-color: #00BCD4 !important;
-            box-shadow: 0 0 0 0.25rem rgba(0, 188, 212, 0.25) !important;
+            box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25) !important;
           }
           
           .btn:hover {
