@@ -16,32 +16,35 @@ const Login = () => {
     setError("");
 
     try {
+      console.log("Attempting login..."); // Debug log
       const response = await axios.post("http://localhost:5002/users/login", {
         email,
         password,
       });
 
-      // Store token and user data
-      localStorage.setItem("token", response.data.token);
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+      console.log("Login response:", response); // Debug log
+
+      if (response.data && response.data.token) {
+        // Store token and user data
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user || {}));
+        
+        console.log("Stored token, now navigating..."); // Debug log
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new Event("authChange"));
+        
+        // Navigate to home
+        navigate("/Home", { replace: true });
+        console.log("Navigation should have occurred"); // Debug log
+      } else {
+        throw new Error("Invalid response from server");
       }
-
-      // Ensure state is updated before navigation
-      await new Promise(resolve => setTimeout(resolve, 0));
-      
-      // Dispatch auth change event
-      const authEvent = new CustomEvent("authChange", {
-        detail: { isAuthenticated: true }
-      });
-      window.dispatchEvent(authEvent);
-
-      // Navigate to home
-      navigate("/Home", { replace: true });
-
     } catch (error) {
-      setError(error.response?.data?.message || "Login failed. Please try again.");
-      console.error("Login Error:", error);
+      console.error("Full error:", error); // More detailed error log
+      setError(error.response?.data?.message || 
+               error.message || 
+               "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
