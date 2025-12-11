@@ -1,933 +1,491 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import {
-  FaTag,
-  FaPlus,
-  FaTrashAlt,
-  FaEdit,
-  FaExclamationTriangle,
-  FaList,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaSearch,
-  FaFilePdf
-} from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { 
+  Search, Plus, Edit2, Trash2, FileText, 
+  CheckCircle, AlertCircle, X, ArrowLeft, 
+  Layers, Save, Download 
+} from "lucide-react";
+
+// --- Components ---
+
+const Notification = ({ message, type, onClose }) => {
+  const isSuccess = type === "success";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -50, x: '-50%' }}
+      animate={{ opacity: 1, y: 0, x: '-50%' }}
+      exit={{ opacity: 0, y: -50, x: '-50%' }}
+      style={{
+        position: 'fixed', top: '20px', left: '50%', zIndex: 1050,
+        backgroundColor: isSuccess ? 'rgba(16, 185, 129, 0.9)' : 'rgba(239, 68, 68, 0.9)',
+        color: 'white', padding: '12px 24px', borderRadius: '50px',
+        backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)'
+      }}
+    >
+      {isSuccess ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+      <span style={{ fontWeight: 500 }}>{message}</span>
+      <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', opacity: 0.8 }}>
+        <X size={18} />
+      </button>
+    </motion.div>
+  );
+};
 
 const CategoryPage = () => {
+  // --- State ---
   const [categories, setCategories] = useState([]);
   const [filteredCategories, setFilteredCategories] = useState([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Form State
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [isSuccessMessage, setIsSuccessMessage] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState(null);
-  const [categoryToEdit, setCategoryToEdit] = useState(null);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const navigate = useNavigate();
+  const [editingCategory, setEditingCategory] = useState(null);
 
-  const formRef = useRef(null);
+  // UI State
+  const [notification, setNotification] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const navigate = useNavigate();
   const reportRef = useRef(null);
 
-  // Fetch categories
+  // --- Effects ---
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          navigate("/login");
-          return;
-        }
-        const response = await axios.get("http://localhost:5002/api/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCategories(response.data.categories);
-        setFilteredCategories(response.data.categories);
-      } catch (error) {
-        showError("Error fetching categories");
-      }
-    };
     fetchCategories();
   }, [navigate]);
 
-  // Search 
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredCategories(categories);
     } else {
       const filtered = categories.filter(
-        (category) =>
-          category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (category.description && 
-           category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        (cat) =>
+          cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (cat.description && cat.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredCategories(filtered);
     }
   }, [searchTerm, categories]);
 
-  // Error handling helper
-  const showError = (message) => {
-    setError(message);
-    setIsSuccessMessage(false);
-    setShowMessageModal(true);
-    setTimeout(() => setShowMessageModal(false), 5000);
+  // --- Actions ---
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+      const response = await axios.get("http://localhost:5002/api/categories", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(response.data.categories);
+      setFilteredCategories(response.data.categories);
+    } catch (error) {
+      showNotification("Error fetching categories", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Success message helper
-  const showSuccess = (message) => {
-    setSuccess(message);
-    setIsSuccessMessage(true);
-    setShowMessageModal(true);
-    setTimeout(() => setShowMessageModal(false), 5000);
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
   };
 
-  // category name validate
   const validateCategoryName = (newName) => {
     const isDuplicate = categories.some(
-      category => category.name.toLowerCase() === newName.toLowerCase() &&
-        category._id !== (categoryToEdit ? categoryToEdit._id : null)
+      cat => cat.name.toLowerCase() === newName.toLowerCase() &&
+        cat._id !== (editingCategory ? editingCategory._id : null)
     );
 
     if (isDuplicate) {
-      showError("A category with this name already exists.");
+      showNotification("Category name already exists.", "error");
       return false;
     }
-
     if (newName.trim().length < 2) {
-      showError("Category name must be at least 2 characters long.");
+      showNotification("Name must be at least 2 characters.", "error");
       return false;
     }
-
     return true;
   };
 
-  // Handle delete confirmation
-  const handleDelete = (id) => {
-    setCategoryToDelete(id);
-    setShowDeleteModal(true);
-  };
-
-  // Confirm delete
-  const confirmDelete = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5002/api/categories/${categoryToDelete}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const updatedCategories = categories.filter((category) => category._id !== categoryToDelete);
-      setCategories(updatedCategories);
-      setFilteredCategories(updatedCategories);
-
-      setShowDeleteModal(false);
-      showSuccess("Category deleted successfully.");
-    } catch (error) {
-      showError("Error deleting category");
-    }
-  };
-
-  // Handle edit click
-  const handleEdit = (category) => {
-    setCategoryToEdit(category);
-    setName(category.name);
-    setDescription(category.description);
-    setShowEditModal(true);
-  };
-
-  // Handle edit validate
-  const handleEditSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateCategoryName(name)) return;
 
-    const updatedCategory = { name, description };
-
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5002/api/categories/${categoryToEdit._id}`, updatedCategory, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      //apply new category
-      const updatedCategories = categories.map((category) =>
-        category._id === categoryToEdit._id ? { ...category, ...updatedCategory } : category
-      );
-      
-      setCategories(updatedCategories);
-      setFilteredCategories(updatedCategories);
-
-      setShowEditModal(false);
-      setCategoryToEdit(null);
-      showSuccess("Category updated successfully.");
-
-      setName("");
-      setDescription("");
+      if (editingCategory) {
+        await axios.put(`http://localhost:5002/api/categories/${editingCategory._id}`, { name, description }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showNotification("Category updated successfully.", "success");
+      } else {
+        await axios.post("http://localhost:5002/api/categories", { name, description }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showNotification("Category added successfully.", "success");
+      }
+      fetchCategories();
+      resetForm();
     } catch (error) {
-      showError("Error updating category");
+      showNotification("Operation failed. Try again.", "error");
     }
   };
 
-  // Handle add validate
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-
-    if (!validateCategoryName(name)) return;
-
-    //create new
-    const newCategory = { name, description };
-
+  const handleDelete = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post("http://localhost:5002/api/categories", newCategory, {
+      await axios.delete(`http://localhost:5002/api/categories/${deleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      const updatedCategories = [...categories, response.data.category];
-      setCategories(updatedCategories);
-      setFilteredCategories(updatedCategories);
-
-      showSuccess("Category added successfully.");
-      setName("");
-      setDescription("");
+      fetchCategories();
+      showNotification("Category deleted.", "success");
+      setDeleteId(null);
     } catch (error) {
-      showError("Error adding category");
+      showNotification("Delete failed.", "error");
     }
   };
 
-  // Generate PDF Report
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setEditingCategory(null);
+  };
+
+  const handleEditClick = (cat) => {
+    setEditingCategory(cat);
+    setName(cat.name);
+    setDescription(cat.description);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const generatePDFReport = () => {
-    setIsGeneratingReport(true);
+    setIsGenerating(true);
+    const input = reportRef.current;
     
-    const currentDate = new Date().toLocaleDateString();
-    const reportElement = reportRef.current;
-    
-    const options = {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: true,
-      letterRendering: true,
-    };
-
-    html2canvas(reportElement, options).then((canvas) => {
+    html2canvas(input, { scale: 2 }).then((canvas) => {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210;
-      const pageHeight = 295;
       const imgHeight = canvas.height * imgWidth / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`Categories_Report_${currentDate}.pdf`);
-      setIsGeneratingReport(false);
-    }).catch((error) => {
-      console.error("Error generating PDF:", error);
-      showError("Failed to generate PDF report");
-      setIsGeneratingReport(false);
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`Categories_Report_${new Date().toLocaleDateString()}.pdf`);
+      setIsGenerating(false);
+      showNotification("PDF Report Downloaded", "success");
+    }).catch(err => {
+      setIsGenerating(false);
+      showNotification("PDF Generation Failed", "error");
     });
   };
 
   return (
-    <div className="container mt-5" style={{
-      maxWidth: "1200px",
-      margin: "0 auto",
-      fontFamily: "'Poppins', sans-serif",
-      animation: "fadeIn 0.5s ease-in-out"
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#0f172a',
+      color: '#f8fafc',
+      paddingTop: '40px',
+      paddingBottom: '80px',
+      fontFamily: '"Inter", sans-serif',
+      position: 'relative'
     }}>
-      <br />
-      <div className="card shadow-lg" style={{
-        borderRadius: "15px",
-        border: "none",
-        overflow: "hidden"
-      }}>
-        <div className="card-header" style={{
-          background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-          color: "white",
-          border: "none",
-          padding: "25px 30px",
-          position: "relative"
-        }}>
-          <div className="d-flex justify-content-between align-items-center">
-            <h2 className="m-0" style={{
-              fontWeight: "600",
-              fontSize: "28px",
-              letterSpacing: "0.5px"
-            }}>
-              <FaTag className="me-3" />
-              Category Management
-            </h2>
-            <button
-              onClick={generatePDFReport}
-              disabled={isGeneratingReport}
-              className="btn btn-light"
+      
+      {/* Custom Scrollbar Styles */}
+      <style>{`
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .form-control:focus {
+           border-color: #38bdf8 !important;
+           box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1) !important;
+        }
+        .form-control::placeholder {
+           color: #64748b;
+        }
+      `}</style>
+
+      {/* Background Glow */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '500px',
+        background: 'radial-gradient(circle at 50% -20%, rgba(6, 182, 212, 0.15), transparent 70%)',
+        zIndex: 0, pointerEvents: 'none'
+      }} />
+
+      {/* Notifications */}
+      <AnimatePresence>
+        {notification && <Notification {...notification} onClose={() => setNotification(null)} />}
+      </AnimatePresence>
+
+      {/* Delete Modal */}
+      <AnimatePresence>
+        {deleteId && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100
+          }}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               style={{
-                borderRadius: "8px",
-                padding: "10px 15px",
-                fontSize: "14px",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+                background: '#1e293b', padding: '30px', borderRadius: '24px',
+                border: '1px solid rgba(255,255,255,0.1)', maxWidth: '400px', width: '90%',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
               }}
             >
-              <FaFilePdf />
-              {isGeneratingReport ? "Generating..." : "Export PDF"}
-            </button>
+              <h4 className="fw-bold mb-3 text-center">Delete Category?</h4>
+              <p className="text-muted text-center mb-4">Are you sure you want to remove this category? This cannot be undone.</p>
+              <div className="d-flex gap-3">
+                <button onClick={() => setDeleteId(null)} className="btn btn-secondary flex-grow-1 py-2" style={{ borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: 'none' }}>Cancel</button>
+                <button onClick={handleDelete} className="btn btn-danger flex-grow-1 py-2" style={{ borderRadius: '12px', background: '#ef4444', border: 'none' }}>Delete</button>
+              </div>
+            </motion.div>
           </div>
-        </div>
+        )}
+      </AnimatePresence>
 
-        {/* Hidden report content for PDF generation */}
-        <div ref={reportRef} style={{ position: "absolute", left: "-9999px" }}>
-          <div style={{ padding: "20px", fontFamily: "Arial" }}>
-            <h1 style={{ textAlign: "center", color: "#00838F", marginBottom: "20px" }}>
-              Categories Report
-            </h1>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "20px",
-              fontSize: "14px",
-              color: "#555"
-            }}>
-              <div>Generated on: {new Date().toLocaleDateString()}</div>
-              <div>Total Categories: {categories.length}</div>
-            </div>
-            <table style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginBottom: "20px"
-            }}>
-              <thead>
-                <tr style={{
-                  backgroundColor: "#00BCD4",
-                  color: "white",
-                  textAlign: "left"
-                }}>
-                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>No.</th>
-                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>Name</th>
-                  <th style={{ padding: "10px", border: "1px solid #ddd" }}>Description</th>
+      {/* HIDDEN REPORT CONTAINER */}
+      <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+        <div ref={reportRef} style={{ padding: "40px", fontFamily: "Arial", background: "white", width: "210mm", minHeight: "297mm", color: "black" }}>
+          <h1 style={{ textAlign: "center", color: "#00838F", borderBottom: "2px solid #00838F", paddingBottom: "10px" }}>Category Inventory Report</h1>
+          <p style={{ textAlign: "right", color: "#666", marginTop: "10px" }}>Generated: {new Date().toLocaleDateString()}</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "20px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#00BCD4", color: "white" }}>
+                <th style={{ padding: "12px", border: "1px solid #ddd" }}>Name</th>
+                <th style={{ padding: "12px", border: "1px solid #ddd" }}>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((cat, i) => (
+                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f9f9f9" : "white" }}>
+                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{cat.name}</td>
+                  <td style={{ padding: "12px", border: "1px solid #ddd" }}>{cat.description}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {categories.map((category, index) => (
-                  <tr key={category._id} style={{
-                    borderBottom: "1px solid #ddd",
-                    backgroundColor: index % 2 === 0 ? "#f9f9f9" : "white"
-                  }}>
-                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{index + 1}</td>
-                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{category.name}</td>
-                    <td style={{ padding: "10px", border: "1px solid #ddd" }}>{category.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div style={{
-              textAlign: "center",
-              marginTop: "30px",
-              fontSize: "12px",
-              color: "#777"
-            }}>
-              This report was generated by the Category Management System
-            </div>
-          </div>
-        </div>
-
-        <div className="card-body p-4">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="input-group" style={{
-              borderRadius: "8px",
-              overflow: "hidden",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-              
-            }}>
-              <span className="input-group-text" style={{
-                backgroundColor: "white",
-                borderRight: "none",
-                padding: "12px 15px"
-              }}>
-                <FaSearch style={{ color: "#6c757d" }} />
-              </span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search categories by name or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  borderLeft: "none",
-                  padding: "12px 15px",
-                  fontSize: "15px",
-                  border: "2px solid #e0e0e0"
-                }}
-              />
-              {searchTerm && (
-                <button
-                  className="btn btn-outline-secondary"
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  style={{
-                    backgroundColor: "white",
-                    borderLeft: "none",
-                    border: "2px solid #e0e0e0",
-                    height: "40px"
-                  }}
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Add Category Form */}
-          <div
-            className="card mb-4"
-            style={{
-              borderRadius: "10px",
-              border: "none",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-            }}
-          >
-            <div className="card-body">
-              <form onSubmit={handleAddCategory}>
-                <div className="row g-3">
-                  <div className="col-md-12 mb-3">
-                    <label className="form-label" style={{ fontWeight: "600" }}>Category Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      style={{
-                        borderRadius: "8px",
-                        border: "2px solid #e0e0e0",
-                        padding: "10px 15px",
-                        fontSize: "15px"
-                      }}
-                    />
-                  </div>
-                  <div className="col-md-12 mb-3">
-                    <label className="form-label" style={{ fontWeight: "600" }}>Description</label>
-                    <textarea
-                      className="form-control"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      required
-                      style={{
-                        borderRadius: "8px",
-                        border: "2px solid #e0e0e0",
-                        padding: "10px 15px",
-                        fontSize: "15px",
-                        minHeight: "100px"
-                      }}
-                    />
-                  </div>
-                  <div className="col-12">
-                    <button
-                      type="submit"
-                      className="btn btn-success"
-                      style={{
-                        borderRadius: "8px",
-                        padding: "12px",
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                        border: "none",
-                        boxShadow: "0 4px 10px rgba(0, 188, 212, 0.3)",
-                      }}
-                    >
-                      Add Category
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          {/* Category List */}
-          <div className="table-responsive" style={{
-            borderRadius: "10px",
-            overflow: "hidden",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-          }}>
-            <table className="table table-hover mb-0">
-              <thead>
-                <tr style={{
-                  backgroundColor: "#f8f9fa",
-                  borderBottom: "2px solid #e9ecef"
-                }}>
-                  <th scope="col" style={{
-                    padding: "15px 20px",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    color: "#495057"
-                  }}>Name</th>
-                  <th scope="col" style={{
-                    padding: "15px 20px",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    color: "#495057"
-                  }}>Description</th>
-                  <th scope="col" style={{
-                    padding: "15px 20px",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    color: "#495057",
-                    textAlign: "center"
-                  }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCategories.length > 0 ? (
-                  filteredCategories.map((category) => (
-                    <tr key={category._id} style={{
-                      transition: "background-color 0.2s",
-                      borderBottom: "1px solid #e9ecef"
-                    }}>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        fontWeight: "500",
-                        verticalAlign: "middle"
-                      }}>{category.name}</td>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        verticalAlign: "middle"
-                      }}>{category.description}</td>
-                      <td style={{
-                        padding: "15px 20px",
-                        fontSize: "15px",
-                        verticalAlign: "middle",
-                        textAlign: "center"
-                      }}>
-                        <div className="badge bg-secondary">
-                          <button
-                            onClick={() => handleEdit(category)}
-                            className="btn btn-sm me-2"
-                            style={{
-                              backgroundColor: "#00BCD4",
-                              color: "white",
-                              padding: "7px 15px",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              border: "none",
-                              transition: "all 0.2s ease"
-                            }}
-                          >
-                            <FaEdit className="me-1" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(category._id)}
-                            className="btn btn-sm"
-                            style={{
-                              backgroundColor: "#E91E63",
-                              color: "white",
-                              padding: "7px 15px",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                              border: "none",
-                              transition: "all 0.2s ease"
-                            }}
-                          >
-                            <FaTrashAlt className="me-1" /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" className="text-center py-5" style={{ fontSize: "16px", color: "#6c757d" }}>
-                      {searchTerm ? (
-                        <>
-                          <FaSearch size={40} className="d-block mx-auto mb-3 text-muted" />
-                          No categories found matching your search.
-                        </>
-                      ) : (
-                        <>
-                          <FaList size={40} className="d-block mx-auto mb-3 text-muted" />
-                          No categories found. Add a new category.
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div
-          className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1050,
-          }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
-                  <FaExclamationTriangle className="me-2" />
-                  Confirm Delete
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  style={{ filter: "brightness(0) invert(1)" }}
-                  onClick={() => setShowDeleteModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body p-4" style={{ fontSize: "16px" }}>
-                <div className="text-center mb-3">
-                  <div style={{
-                    width: "70px",
-                    height: "70px",
-                    margin: "10px auto 20px",
-                    background: "rgba(233, 30, 99, 0.1)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}>
-                    <FaTrashAlt size={30} style={{ color: "#E91E63" }} />
-                  </div>
-                  <p className="mb-0">Are you sure you want to delete this category?</p>
-                  <p className="text-muted" style={{ fontSize: "14px" }}>This action cannot be undone.</p>
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+        
+        {/* --- Header --- */}
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="d-flex align-items-center mb-3 mb-md-0">
+            <Link to="/" className="text-decoration-none me-4">
+              <motion.div 
+                whileHover={{ scale: 1.1, backgroundColor: 'rgba(6, 182, 212, 0.2)', borderColor: '#06b6d4' }}
+                whileTap={{ scale: 0.9 }}
+                style={{
+                  width: '50px', height: '50px', borderRadius: '50%',
+                  backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0'
+                }}
+              >
+                <ArrowLeft size={24} />
+              </motion.div>
+            </Link>
+            <div>
+              <h1 className="fw-bold m-0 display-6">
+                Category <span style={{ 
+                  background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)', 
+                  WebkitBackgroundClip: 'text', 
+                  WebkitTextFillColor: 'transparent' 
+                }}>Management</span>
+              </h1>
+            </div>
+          </div>
+          
+          <button 
+            onClick={generatePDFReport} 
+            disabled={isGenerating}
+            className="btn d-flex align-items-center text-white"
+            style={{ 
+              background: 'rgba(255,255,255,0.05)', 
+              border: '1px solid rgba(255,255,255,0.1)',
+              padding: '10px 20px', borderRadius: '12px',
+              transition: 'all 0.2s'
+            }}
+          >
+            {isGenerating ? <span className="spinner-border spinner-border-sm me-2"/> : <Download size={18} className="me-2 text-info" />}
+            {isGenerating ? "Exporting..." : "Export PDF Report"}
+          </button>
+        </div>
+
+        <div className="row g-5">
+          
+          {/* --- Left Column: Sticky Form --- */}
+          <div className="col-lg-4">
+            <div style={{ position: 'sticky', top: '30px' }}>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                className="card border-0 shadow-lg"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.7)', backdropFilter: 'blur(12px)',
+                  borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <div className="card-body p-4">
+                  <h4 className="fw-bold mb-4 d-flex align-items-center text-white">
+                    {editingCategory ? <Edit2 size={20} className="me-2 text-warning"/> : <Plus size={20} className="me-2 text-info"/>}
+                    {editingCategory ? "Edit Category" : "Add New Category"}
+                  </h4>
+                  
+                  <form onSubmit={handleSubmit}>
+                    <label className="small mb-2 fw-semibold" style={{ color: '#cbd5e1' }}>CATEGORY NAME</label>
+                    <input 
+                      type="text" 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)}
+                      className="form-control mb-3"
+                      placeholder="e.g. Groceries"
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'white', borderRadius: '12px', padding: '12px'
+                      }}
+                    />
+                    
+                    <label className="small mb-2 fw-semibold" style={{ color: '#cbd5e1' }}>DESCRIPTION</label>
+                    <textarea 
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="form-control mb-4"
+                      rows="4"
+                      placeholder="Brief description..."
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'white', borderRadius: '12px', resize: 'none'
+                      }}
+                    />
+
+                    <button 
+                      type="submit" 
+                      className="btn w-100 py-2 fw-bold text-white d-flex align-items-center justify-content-center"
+                      style={{
+                        background: editingCategory 
+                          ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
+                          : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+                        borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                        padding: '12px'
+                      }}
+                    >
+                      {editingCategory ? <Save size={18} className="me-2"/> : <Plus size={18} className="me-2"/>}
+                      {editingCategory ? "Update Category" : "Create Category"}
+                    </button>
+
+                    {editingCategory && (
+                      <button 
+                        type="button" 
+                        onClick={resetForm}
+                        className="btn w-100 mt-2 py-2 text-muted"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </form>
                 </div>
-              </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px"
-              }}>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setShowDeleteModal(false)}
-                  style={{
-                    borderRadius: "8px",
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={confirmDelete}
-                  style={{
-                    borderRadius: "8px",
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                    border: "none"
-                  }}
-                >
-                  Delete Category
-                </button>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Edit Category Modal */}
-      {showEditModal && (
-        <div
-          className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1050,
-          }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
-                  <FaEdit className="me-2" />
-                  Edit Category
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  style={{ filter: "brightness(0) invert(1)" }}
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setCategoryToEdit(null);
-                    setName("");
-                    setDescription("");
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body p-4">
-                <form onSubmit={handleEditSubmit}>
-                  <div className="row g-3">
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label" style={{ fontWeight: "600" }}>Category Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        style={{
-                          borderRadius: "8px",
-                          border: "2px solid #e0e0e0",
-                          padding: "10px 15px",
-                          fontSize: "15px"
-                        }}
-                      />
-                    </div>
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label" style={{ fontWeight: "600" }}>Description</label>
-                      <textarea
-                        className="form-control"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
-                        style={{
-                          borderRadius: "8px",
-                          border: "2px solid #e0e0e0",
-                          padding: "10px 15px",
-                          fontSize: "15px",
-                          minHeight: "100px"
-                        }}
-                      />
-                    </div>
-                  </div>
-                </form>
-              </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px"
-              }}>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setCategoryToEdit(null);
-                    setName("");
-                    setDescription("");
-                  }}
+          {/* --- Right Column: Grid List --- */}
+          <div className="col-lg-8">
+            
+            {/* Search Bar */}
+            <div className="mb-4 position-relative">
+               <Search size={20} style={{ position: 'absolute', left: '18px', top: '14px', color: '#94a3b8' }} />
+               <input 
+                  type="text"
+                  placeholder="Search categories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="form-control"
                   style={{
-                    borderRadius: "8px",
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500"
+                     width: '100%', padding: '12px 15px 12px 50px', borderRadius: '16px',
+                     border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                     color: '#e2e8f0', fontSize: '1rem'
                   }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleEditSubmit}
-                  style={{
-                    borderRadius: "8px",
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                    border: "none"
-                  }}
-                >
-                  Update Category
-                </button>
-              </div>
+               />
+               {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '15px', top: '12px', background: 'none', border: 'none', color: '#94a3b8' }}>
+                     <X size={18} />
+                  </button>
+               )}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Message Modal (Success/Error) */}
-      {showMessageModal && (
-        <div
-          className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1050,
-          }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{
-                background: isSuccessMessage
-                  ? "linear-gradient(135deg,rgb(149, 196, 232) 0%,rgb(123, 190, 216) 100%)"
-                  : "linear-gradient(135deg, #F44336 0%, #C62828 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
-                  {isSuccessMessage ? (
-                    <FaCheckCircle className="me-2" />
+            {/* Content Area */}
+            {isLoading ? (
+               <div className="text-center py-5"><div className="spinner-border text-info"/></div>
+            ) : (
+              <div className="row g-3">
+                <AnimatePresence>
+                  {filteredCategories.length === 0 ? (
+                     <div className="text-center py-5 text-muted col-12">
+                        <Layers size={48} className="mb-3 opacity-25" />
+                        <p>No categories found.</p>
+                     </div>
                   ) : (
-                    <FaTimesCircle className="me-2" />
+                    filteredCategories.map((cat) => (
+                      <motion.div 
+                        key={cat._id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="col-md-6"
+                      >
+                        <div className="card h-100 border-0" style={{
+                          backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}>
+                          <div className="card-body p-4 d-flex flex-column">
+                            <div className="d-flex justify-content-between align-items-start mb-3">
+                              <h5 className="fw-bold text-white m-0 text-truncate" style={{ fontSize: '1.1rem' }}>{cat.name}</h5>
+                              <div className="d-flex gap-2">
+                                <motion.button 
+                                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                  onClick={() => handleEditClick(cat)} 
+                                  className="btn btn-sm d-flex align-items-center justify-content-center"
+                                  style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', border: 'none' }}>
+                                  <Edit2 size={16} />
+                                </motion.button>
+                                <motion.button 
+                                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                  onClick={() => setDeleteId(cat._id)} 
+                                  className="btn btn-sm d-flex align-items-center justify-content-center"
+                                  style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: 'none' }}>
+                                  <Trash2 size={16} />
+                                </motion.button>
+                              </div>
+                            </div>
+                            <p className="small mb-0" style={{ flex: 1, lineHeight: '1.6', color: '#e2e8f0' }}>
+                              {cat.description || "No description provided."}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
                   )}
-                  {isSuccessMessage ? "Success" : "Error"}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  style={{ filter: "brightness(0) invert(1)" }}
-                  onClick={() => setShowMessageModal(false)}
-                ></button>
+                </AnimatePresence>
               </div>
-              <div className="modal-body p-4 text-center" style={{ fontSize: "16px" }}>
-                <div style={{
-                  width: "70px",
-                  height: "70px",
-                  margin: "10px auto 20px",
-                  background: isSuccessMessage
-                    ? "rgba(76, 175, 80, 0.1)"
-                    : "rgba(244, 67, 54, 0.1)",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  {isSuccessMessage ? (
-                    <FaCheckCircle size={30} style={{ color: "#4CAF50" }} />
-                  ) : (
-                    <FaTimesCircle size={30} style={{ color: "#F44336" }} />
-                  )}
-                </div>
-                <p className="mb-0" style={{ fontWeight: "500" }}>
-                  {isSuccessMessage ? success : error}
-                </p>
-              </div>
-              <div className="modal-footer" style={{
-                borderTop: "1px solid #f0f0f0",
-                padding: "15px",
-                justifyContent: "center"
-              }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setShowMessageModal(false)}
-                  style={{
-                    borderRadius: "8px",
-                    padding: "10px 25px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    background: isSuccessMessage
-                      ? "linear-gradient(135deg,rgb(76, 175, 165) 0%,rgb(46, 83, 125) 100%)"
-                      : "linear-gradient(135deg, #F44336 0%, #C62828 100%)",
-                    color: "white",
-                    border: "none"
-                  }}
-                >
-                  OK
-                </button>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Custom CSS */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          
-          .form-control:focus, .form-select:focus {
-            border-color: #00BCD4 !important;
-            box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25) !important;
-          }
-          
-          .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-          }
-          
-          tr:hover {
-            background-color: #f8f9fa;
-          }
-        `}
-      </style>
+        </div>
+      </div>
     </div>
   );
 };

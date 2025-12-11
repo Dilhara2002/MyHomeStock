@@ -1,24 +1,37 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { 
+  Send, Bot, User, ArrowLeft, Sparkles, 
+  MessageSquare, AlertCircle 
+} from 'lucide-react';
 
 function ChatBot() {
+  // --- State ---
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  
+  // --- Refs ---
   const chatBoxRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // --- Effects ---
+  // Auto-scroll to bottom
   useEffect(() => {
     if (chatBoxRef.current) {
-      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      chatBoxRef.current.scrollTo({
+        top: chatBoxRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
+  // --- Handlers ---
   const sendMessage = async () => {
     if (!input.trim()) return;
   
-    // Add user message to chat
-    const userMessage = { text: input, sender: 'user' };
+    const userMessage = { text: input, sender: 'user', id: Date.now() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
@@ -30,364 +43,289 @@ function ChatBot() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: userMessage.text })
       });
   
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+      if (!response.ok) throw new Error('Network response was not ok');
   
       const data = await response.json();
-      const botMessage = { text: data.reply, sender: 'bot' };
+      const botMessage = { text: data.reply, sender: 'bot', id: Date.now() + 1 };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
       const errorMessage = { 
-        text: 'Sorry, there was an error processing your request.', 
-        sender: 'bot',
-        isError: true 
+        text: 'Sorry, I encountered an error connecting to the server.', 
+        sender: 'bot', 
+        isError: true,
+        id: Date.now() + 1
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
+      // Focus input back after sending (optional)
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
+    if (e.key === 'Enter') sendMessage();
   };
-
-  // Inline styles
-  const styles = {
-    container: {
-      width: '800px',
-      height: '600px',
-      margin: '20px auto',
-      background: 'linear-gradient(145deg, #f6f6f6, #e6e9ef)',
-      fontFamily: 'Arial, sans-serif',
-      borderRadius: '12px',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      overflow: 'hidden',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '15px 20px',
-      borderBottom: '1px solid #e0e0e0',
-      backgroundColor: '#fff'
-    },
-    botAvatar: {
-      width: '38px',
-      height: '38px',
-      backgroundColor: '#4CAF50',
-      borderRadius: '50%',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: '10px',
-      color: 'white',
-      fontWeight: 'bold',
-      fontSize: '16px'
-    },
-    headerTitle: {
-      flex: 1,
-      margin: 0,
-      fontSize: '18px',
-      fontWeight: 600,
-      color: '#333'
-    },
-    statusWrapper: {
-      display: 'flex',
-      alignItems: 'center'
-    },
-    statusIndicator: {
-      height: '10px',
-      width: '10px',
-      backgroundColor: '#4CAF50',
-      borderRadius: '50%',
-      display: 'inline-block',
-      marginRight: '5px'
-    },
-    statusText: {
-      fontSize: '12px',
-      color: '#666'
-    },
-    chatBox: {
-      flex: 1,
-      overflowY: 'auto',
-      padding: '20px',
-      backgroundColor: '#fff'
-    },
-    emptyState: {
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      textAlign: 'center',
-      padding: '20px'
-    },
-    emptyIcon: {
-      fontSize: '40px',
-      color: '#ddd',
-      marginBottom: '15px'
-    },
-    emptyTitle: {
-      fontSize: '16px',
-      color: '#999',
-      marginBottom: '10px'
-    },
-    emptySubtitle: {
-      fontSize: '14px',
-      color: '#999'
-    },
-    messageRow: {
-      display: 'flex',
-      marginBottom: '10px',
-      width: '100%'
-    },
-    userRow: {
-      justifyContent: 'flex-end'
-    },
-    botRow: {
-      justifyContent: 'flex-start'
-    },
-    messageBubble: {
-      margin: '4px 0',
-      padding: '12px 16px',
-      borderRadius: '18px',
-      maxWidth: '70%',
-      wordWrap: 'break-word',
-      position: 'relative',
-      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
-    },
-    userMessage: {
-      textAlign: 'right',
-      color: '#fff',
-      backgroundColor: '#2979FF',
-      borderBottomRightRadius: '5px'
-    },
-    botMessage: {
-      textAlign: 'left',
-      color: '#333',
-      backgroundColor: '#E8E8E8',
-      borderBottomLeftRadius: '5px'
-    },
-    errorMessage: {
-      backgroundColor: '#ffebee',
-      color: '#c62828'
-    },
-    messageTime: {
-      fontSize: '10px',
-      color: '#999',
-      marginTop: '5px',
-      textAlign: 'right'
-    },
-    typingIndicator: {
-      display: 'flex',
-      padding: '12px 15px',
-      backgroundColor: '#E8E8E8',
-      width: 'fit-content',
-      borderRadius: '18px',
-      alignItems: 'center'
-    },
-    typingDot: {
-      width: '8px',
-      height: '8px',
-      backgroundColor: '#777',
-      borderRadius: '50%',
-      margin: '0 2px',
-      display: 'inline-block',
-      animation: 'typingAnimation 1.4s infinite ease-in-out'
-    },
-    inputContainer: {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '12px 20px',
-      backgroundColor: '#f8f9fa',
-      borderTop: '1px solid #e0e0e0',
-      gap: '10px'
-    },
-    chatInput: {
-      flex: 1,
-      padding: '12px 16px',
-      borderRadius: '24px',
-      border: '1px solid #ddd',
-      outline: 'none',
-      fontSize: '14px',
-      transition: 'all 0.2s ease',
-      backgroundColor: '#fff',
-      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
-    },
-    chatInputFocus: {
-      borderColor: '#2979FF',
-      boxShadow: '0 0 0 2px rgba(41, 121, 255, 0.2)'
-    },
-    chatInputHasContent: {
-      borderColor: '#2979FF'
-    },
-    sendButton: {
-      padding: '12px 24px',
-      borderRadius: '24px',
-      border: 'none',
-      backgroundColor: '#2979FF',
-      color: '#fff',
-      cursor: 'pointer',
-      fontWeight: 600,
-      fontSize: '14px',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center'
-    },
-    sendButtonHover: {
-      backgroundColor: '#1a68e5',
-      transform: 'translateY(-1px)'
-    },
-    sendButtonActive: {
-      transform: 'translateY(0)'
-    },
-    sendButtonDisabled: {
-      backgroundColor: '#cccccc',
-      cursor: 'not-allowed',
-      transform: 'none'
-    },
-    sendArrow: {
-      marginLeft: '6px'
-    }
-  };
-
-  // Add animation styles to head
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.innerHTML = `
-      @keyframes typingAnimation {
-        0%, 60%, 100% { transform: translateY(0); }
-        30% { transform: translateY(-5px); }
-      }
-    `;
-    document.head.appendChild(styleElement);
-    return () => document.head.removeChild(styleElement);
-  }, []);
-
-  // Handle focus style
-  const [isInputFocused, setIsInputFocused] = useState(false);
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.botAvatar}>AI</div>
-        <h3 style={styles.headerTitle}>ChatBot Assistant</h3>
-        <div style={styles.statusWrapper}>
-          <span style={styles.statusIndicator}></span>
-          <span style={styles.statusText}>Online</span>
-        </div>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#0f172a', // Deep Slate
+      color: '#f8fafc',
+      paddingTop: '30px',
+      paddingBottom: '30px',
+      fontFamily: '"Inter", sans-serif',
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       
-      {/* Chat Messages */}
-      <div style={styles.chatBox} ref={chatBoxRef}>
-        {messages.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>💬</div>
-            <p style={styles.emptyTitle}>No messages yet</p>
-            <p style={styles.emptySubtitle}>Send a message to start chatting</p>
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <div 
-              key={index} 
+      {/* CSS for custom scrollbar */}
+      <style>
+        {`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        `}
+      </style>
+
+      {/* Background Glow */}
+      <div style={{
+        position: 'absolute', top: '-20%', left: '50%', transform: 'translateX(-50%)',
+        width: '800px', height: '800px',
+        background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(15, 23, 42, 0) 70%)',
+        zIndex: 0, pointerEvents: 'none'
+      }} />
+
+      <div className="container d-flex flex-column" style={{ position: 'relative', zIndex: 1, flex: 1, maxWidth: '900px' }}>
+        
+        {/* --- Header --- */}
+        <div className="d-flex align-items-center mb-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Link to="/" className="text-decoration-none me-4">
+            <motion.div 
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: '#38bdf8' }}
+              whileTap={{ scale: 0.9 }}
               style={{
-                ...styles.messageRow,
-                ...(msg.sender === 'user' ? styles.userRow : styles.botRow)
+                width: '45px', height: '45px', borderRadius: '50%',
+                backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0'
               }}
             >
-              <div
-                style={{
-                  ...styles.messageBubble,
-                  ...(msg.sender === 'user' 
-                    ? styles.userMessage 
-                    : msg.isError 
-                      ? {...styles.botMessage, ...styles.errorMessage} 
-                      : styles.botMessage)
-                }}
-              >
-                {msg.text}
-                <div style={styles.messageTime}>
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
+              <ArrowLeft size={22} />
+            </motion.div>
+          </Link>
+          
+          <div className="d-flex align-items-center">
+            <div style={{ 
+              width: '45px', height: '45px', borderRadius: '12px', 
+              background: 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(56, 189, 248, 0.4)',
+              marginRight: '15px'
+            }}>
+               <Bot size={24} color="white" />
+            </div>
+            <div>
+              <h4 className="fw-bold m-0 text-white">AI Assistant</h4>
+              <div className="d-flex align-items-center">
+                <span style={{ 
+                  width: '8px', height: '8px', backgroundColor: '#4ade80', 
+                  borderRadius: '50%', display: 'inline-block', marginRight: '6px',
+                  boxShadow: '0 0 8px #4ade80'
+                }}></span>
+                <span className="small text-muted">Online & Ready</span>
               </div>
             </div>
-          ))
-        )}
-        
-        {/* Typing indicator */}
-        {isTyping && (
-          <div style={{...styles.messageRow, ...styles.botRow}}>
-            <div style={styles.typingIndicator}>
-              <div style={{...styles.typingDot, animationDelay: '0s'}}></div>
-              <div style={{...styles.typingDot, animationDelay: '0.2s'}}></div>
-              <div style={{...styles.typingDot, animationDelay: '0.4s'}}></div>
-            </div>
           </div>
-        )}
-      </div>
-      
-      {/* Input Area */}
-      <div style={styles.inputContainer}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          onFocus={() => setIsInputFocused(true)}
-          onBlur={() => setIsInputFocused(false)}
-          placeholder="Ask me anything..."
-          ref={inputRef}
+        </div>
+
+        {/* --- Chat Area --- */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card border-0 d-flex flex-column flex-grow-1 shadow-lg"
           style={{
-            ...styles.chatInput,
-            ...(input ? styles.chatInputHasContent : {}),
-            ...(isInputFocused ? styles.chatInputFocus : {})
-          }}
-        />
-        <button 
-          onClick={sendMessage} 
-          disabled={!input.trim()}
-          style={{
-            ...styles.sendButton,
-            ...(!input.trim() ? styles.sendButtonDisabled : {}),
-          }}
-          onMouseOver={(e) => {
-            if (input.trim()) {
-              e.currentTarget.style.backgroundColor = styles.sendButtonHover.backgroundColor;
-              e.currentTarget.style.transform = styles.sendButtonHover.transform;
-            }
-          }}
-          onMouseOut={(e) => {
-            if (input.trim()) {
-              e.currentTarget.style.backgroundColor = styles.sendButton.backgroundColor;
-              e.currentTarget.style.transform = styles.sendButton.transform;
-            }
-          }}
-          onMouseDown={(e) => {
-            if (input.trim()) {
-              e.currentTarget.style.transform = styles.sendButtonActive.transform;
-            }
-          }}
-          onMouseUp={(e) => {
-            if (input.trim()) {
-              e.currentTarget.style.transform = styles.sendButtonHover.transform;
-            }
+            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            overflow: 'hidden',
+            height: '600px' // Fixed height or flex-grow
           }}
         >
-          <span>Send</span>
-          <span style={styles.sendArrow}>→</span>
-        </button>
+          {/* Messages Container */}
+          <div 
+            ref={chatBoxRef}
+            className="card-body p-4 custom-scrollbar" 
+            style={{ 
+              overflowY: 'auto', 
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {messages.length === 0 ? (
+              <div className="h-100 d-flex flex-column align-items-center justify-content-center text-center opacity-50">
+                <div style={{ 
+                  width: '80px', height: '80px', borderRadius: '50%', 
+                  background: 'rgba(255,255,255,0.05)', display: 'flex', 
+                  alignItems: 'center', justifyContent: 'center', marginBottom: '20px'
+                }}>
+                  <Sparkles size={40} color="#94a3b8" />
+                </div>
+                <h4 className="fw-light">How can I help you today?</h4>
+                <p className="small text-muted">Ask about inventory, recipes, or settings.</p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={msg.id || index}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className={`d-flex mb-3 ${msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`}
+                  >
+                    {/* Bot Icon */}
+                    {msg.sender === 'bot' && (
+                      <div className="me-2 d-flex align-items-end">
+                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                          <Bot size={16} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bubble */}
+                    <div style={{
+                      maxWidth: '75%',
+                      padding: '14px 18px',
+                      borderRadius: '18px',
+                      borderTopLeftRadius: msg.sender === 'bot' ? '4px' : '18px',
+                      borderTopRightRadius: msg.sender === 'user' ? '4px' : '18px',
+                      backgroundColor: msg.sender === 'user' 
+                        ? '#3b82f6' // Fallback
+                        : msg.isError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.6)',
+                      background: msg.sender === 'user' 
+                        ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' 
+                        : null,
+                      border: msg.sender === 'bot' ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                      color: msg.isError ? '#f87171' : (msg.sender === 'user' ? 'white' : '#e2e8f0'),
+                      boxShadow: msg.sender === 'user' ? '0 4px 15px rgba(37, 99, 235, 0.3)' : 'none',
+                      position: 'relative'
+                    }}>
+                      {msg.isError && <AlertCircle size={16} className="me-2 mb-1" style={{ display: 'inline' }} />}
+                      {msg.text}
+                      
+                      {/* Timestamp */}
+                      <div className="text-end mt-1" style={{ 
+                        fontSize: '0.7rem', 
+                        opacity: 0.6,
+                        color: msg.sender === 'user' ? 'rgba(255,255,255,0.8)' : '#94a3b8' 
+                      }}>
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+
+                    {/* User Icon */}
+                    {msg.sender === 'user' && (
+                      <div className="ms-2 d-flex align-items-end">
+                         <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
+                          <User size={16} />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }}
+                className="d-flex align-items-center text-muted ms-1"
+              >
+                <div style={{ width: '30px', height: '30px', marginRight: '8px' }}></div>
+                <div className="p-3 rounded-4" style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="d-flex align-items-center">
+                    <motion.span 
+                      animate={{ opacity: [0.4, 1, 0.4] }} 
+                      transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                      style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', margin: '0 2px' }} 
+                    />
+                    <motion.span 
+                      animate={{ opacity: [0.4, 1, 0.4] }} 
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                      style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', margin: '0 2px' }} 
+                    />
+                    <motion.span 
+                      animate={{ opacity: [0.4, 1, 0.4] }} 
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                      style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', margin: '0 2px' }} 
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Input Area */}
+          <div className="p-3" style={{ 
+            backgroundColor: 'rgba(15, 23, 42, 0.8)', 
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)' 
+          }}>
+            <div className="d-flex align-items-center position-relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  paddingRight: '60px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  backgroundColor: 'rgba(30, 41, 59, 0.5)',
+                  color: '#fff',
+                  outline: 'none',
+                  fontSize: '0.95rem'
+                }}
+              />
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={sendMessage}
+                disabled={!input.trim()}
+                className="btn position-absolute"
+                style={{
+                  right: '8px',
+                  top: '6px',
+                  borderRadius: '12px',
+                  background: input.trim() ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                  color: input.trim() ? 'white' : 'rgba(255,255,255,0.3)',
+                  border: 'none',
+                  padding: '8px 12px',
+                  cursor: input.trim() ? 'pointer' : 'default'
+                }}
+              >
+                <Send size={18} />
+              </motion.button>
+            </div>
+            <div className="text-center mt-2">
+              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>AI can make mistakes. Please verify important information.</span>
+            </div>
+          </div>
+
+        </motion.div>
       </div>
     </div>
   );

@@ -1,957 +1,451 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { FaBoxOpen, FaPlus, FaTrashAlt, FaEdit, FaExclamationTriangle, FaCalendarAlt, FaTag, FaList, FaFilePdf } from "react-icons/fa";
-import { jsPDF } from "jspdf";
+import { motion, AnimatePresence } from "framer-motion";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { 
+  Search, Plus, Edit2, Trash2, FileText, 
+  CheckCircle, AlertCircle, X, ArrowLeft, 
+  Save, Download, AlertTriangle 
+} from "lucide-react";
 
-const InventoryList = () => {
-  const [items, setItems] = useState([]);
-  const [error, setError] = useState("");
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [itemToEdit, setItemToEdit] = useState(null);
-  const [name, setName] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("pieces");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [category, setCategory] = useState("");
-  const [categories, setCategories] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const navigate = useNavigate();
-
-  // Fetch inventory items
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          navigate("/login");
-          return;
-        }
-        const response = await axios.get("http://localhost:5002/inventory", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setItems(response.data);
-      } catch (error) {
-        setError("Error fetching inventory");
-      }
-    };
-    fetchItems();
-  }, [navigate]);
-
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5002/api/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCategories(response.data.categories);
-      } catch (error) {
-        setError("Error fetching categories");
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // Handle delete confirmation
-  const handleDelete = (id) => {
-    setItemToDelete(id);
-    setShowDeleteModal(true);
-  };
-
-  // Confirm delete
-  const confirmDelete = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5002/inventory/${itemToDelete}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setItems(items.filter((item) => item._id !== itemToDelete));
-      setShowDeleteModal(false);
-    } catch (error) {
-      setError("Error deleting item");
-    }
-  };
-
-  // Handle edit click
-  const handleEdit = (item) => {
-    setItemToEdit(item);
-    setName(item.name);
-    setQuantity(item.quantity);
-    setUnit(item.unit);
-    setExpiryDate(item.expiryDate ? item.expiryDate.slice(0, 10) : "");
-    setCategory(item.category || "");
-    setShowEditModal(true);
-  };
-
-  // Handle edit form submission
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-
-    const updatedItem = { name, quantity, unit, expiryDate, category };
-
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5002/inventory/${itemToEdit._id}`, updatedItem, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // Update the item in the list
-      setItems(
-        items.map((item) =>
-          item._id === itemToEdit._id ? { ...item, ...updatedItem } : item
-        )
-      );
-
-      setShowEditModal(false);
-    } catch (error) {
-      setError("Error updating item");
-    }
-  };
-
-  // Generate PDF report
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Inventory Report", 105, 20, { align: 'center' });
-    
-    // Date
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
-    
-    // Summary Stats
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Summary Statistics", 14, 45);
-    
-    const totalItems = items.length;
-    const nearingExpiry = items.filter(item => isNearingExpiry(item.expiryDate)).length;
-    const expiredItems = items.filter(item => isExpired(item.expiryDate)).length;
-    const uniqueCats = [...new Set(items.map((item) => item.category).filter(Boolean))].length;
-    
-    doc.setFontSize(12);
-    doc.text(`Total Items: ${totalItems}`, 14, 55);
-    doc.text(`Nearing Expiry: ${nearingExpiry}`, 14, 65);
-    doc.text(`Expired Items: ${expiredItems}`, 14, 75);
-    doc.text(`Categories: ${uniqueCats}`, 14, 85);
-    
-    // Table Header
-    doc.setFontSize(14);
-    doc.text("Inventory Items", 14, 100);
-    
-    // Table column headers
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text("Name", 14, 110);
-    doc.text("Quantity", 60, 110);
-    doc.text("Expiry Date", 100, 110);
-    doc.text("Category", 140, 110);
-    doc.text("Status", 180, 110);
-    
-    // Table rows
-    doc.setFont(undefined, 'normal');
-    let y = 120;
-    filteredItems.forEach((item, index) => {
-      if (y > 280) { // Add new page if we're at the bottom
-        doc.addPage();
-        y = 20;
-        // Add headers to new page
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text("Name", 14, y);
-        doc.text("Quantity", 60, y);
-        doc.text("Expiry Date", 100, y);
-        doc.text("Category", 140, y);
-        doc.text("Status", 180, y);
-        doc.setFont(undefined, 'normal');
-        y += 10;
-      }
-      
-      doc.text(item.name, 14, y);
-      doc.text(`${item.quantity} ${item.unit}`, 60, y);
-      doc.text(item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A', 100, y);
-      doc.text(item.category || 'N/A', 140, y);
-      doc.text(
-        isExpired(item.expiryDate) ? 'Expired' : 
-        isNearingExpiry(item.expiryDate) ? 'Nearing Expiry' : 'Good', 
-        180, y
-      );
-      
-      // Add horizontal line
-      doc.line(14, y + 5, 190, y + 5);
-      
-      y += 10;
-    });
-    
-    // Footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
-    }
-    
-    doc.save(`inventory_report_${new Date().toISOString().slice(0, 10)}.pdf`);
-  };
-
-  // Filter items based on search term and category
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterCategory === "" || item.category === filterCategory)
-  );
-
-  // Get unique categories from items
-  const uniqueCategories = [...new Set(items.map((item) => item.category).filter(Boolean))];
-
-  // Check if an item is nearing expiry (within 7 days)
-  const isNearingExpiry = (date) => {
-    if (!date) return false;
-    const expiryDate = new Date(date);
-    const today = new Date();
-    const differenceInDays = Math.floor((expiryDate - today) / (1000 * 60 * 60 * 24));
-    return differenceInDays >= 0 && differenceInDays <= 7;
-  };
-
-  // Check if an item is expired
-  const isExpired = (date) => {
-    if (!date) return false;
-    const expiryDate = new Date(date);
-    const today = new Date();
-    return expiryDate < today;
-  };
-
+// --- Reusable Modal Component ---
+const Modal = ({ isOpen, onClose, title, children, footer }) => {
+  if (!isOpen) return null;
   return (
-    <div className="container mt-5" style={{ 
-      maxWidth: "1200px", 
-      margin: "0 auto",
-      fontFamily: "'Poppins', sans-serif",
-      animation: "fadeIn 0.5s ease-in-out"
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+      display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100
     }}>
-      <div className="card shadow-lg" style={{ 
-        borderRadius: "15px", 
-        border: "none",
-        overflow: "hidden"
-      }}>
-        <div className="card-header" style={{
-          background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-          color: "white",
-          border: "none",
-          padding: "25px 30px",
-          position: "relative"
-        }}>
-          <div className="d-flex justify-content-between align-items-center">
-            <h2 className="m-0" style={{ 
-              fontWeight: "600", 
-              fontSize: "28px",
-              letterSpacing: "0.5px"
-            }}>
-              <FaBoxOpen className="me-3" />
-              Inventory Management
-            </h2>
-            <div className="d-flex gap-3">
-              <button 
-                onClick={generatePDF} 
-                className="btn btn-light" 
-                style={{
-                  borderRadius: "8px",
-                padding: "10px 15px",
-                fontSize: "14px",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
-                }}
-              >
-                <FaFilePdf /> Generate Report
-              </button>
-              <Link to="/inventory/add" className="btn btn-light" style={{
-                borderRadius: "8px",
-                padding: "10px 15px",
-                fontSize: "14px",
-                fontWeight: "500",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
-              }}>
-                <FaPlus /> Add New Item
-              </Link>
-            </div>
-          </div>
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+        style={{
+          background: '#1e293b', width: '90%', maxWidth: '600px',
+          borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', maxHeight: '90vh', overflowY: 'auto'
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center p-4 border-bottom border-secondary border-opacity-25">
+          <h4 className="m-0 fw-bold text-white">{title}</h4>
+          <button onClick={onClose} className="btn btn-sm text-muted hover-white"><X size={20}/></button>
         </div>
-        
-        <div className="card-body p-4">
-          {error && (
-            <div className="alert alert-danger" style={{
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              padding: "15px",
-              marginBottom: "20px"
-            }}>
-              <FaExclamationTriangle className="me-3" size={20} />
-              <span style={{ fontWeight: "500" }}>{error}</span>
-            </div>
-          )}
-
-          {/* Search and Filter */}
-          <div className="row mb-4 g-3">
-            <div className="col-md-6">
-              <div className="input-group" style={{ boxShadow: "0 2px 5px rgba(0,0,0,0.08)" }}>
-                <span className="input-group-text bg-white" style={{ 
-                  borderRadius: "10px 0 0 10px", 
-                  border: "2px solid #e0e0e0",
-                  borderRight: "none" 
-                }}>
-                  <i className="bi bi-search"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ 
-                    borderRadius: "0 10px 10px 0", 
-                    border: "2px solid #e0e0e0", 
-                    borderLeft: "none",
-                    padding: "12px 15px",
-                    fontSize: "16px"
-                  }}
-                />
-              </div>
-            </div>
-            <div className="col-md-6">
-              <select
-                className="form-select"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                style={{ 
-                  borderRadius: "10px", 
-                  border: "2px solid #e0e0e0", 
-                  padding: "12px 15px",
-                  fontSize: "16px",
-                  boxShadow: "0 2px 5px rgba(0,0,0,0.08)"
-                }}
-              >
-                <option value="">All Categories</option>
-                {uniqueCategories.map((cat, index) => (
-                  <option key={index} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="row mb-4 g-3">
-            <div className="col-md-3">
-              <div className="card h-100" style={{ 
-                borderRadius: "10px", 
-                border: "none", 
-                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-              }}>
-                <div className="card-body d-flex align-items-center">
-                  <div style={{ 
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "rgba(0, 188, 212, 0.1)",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "15px"
-                  }}>
-                    <FaBoxOpen size={25} style={{ color: "#00BCD4" }} />
-                  </div>
-                  <div>
-                    <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>{items.length}</h3>
-                    <p className="mb-0" style={{ color: "#6c757d" }}>Total Items</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="card h-100" style={{ 
-                borderRadius: "10px", 
-                border: "none", 
-                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-              }}>
-                <div className="card-body d-flex align-items-center">
-                  <div style={{ 
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "rgba(255, 193, 7, 0.1)",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "15px"
-                  }}>
-                    <FaCalendarAlt size={25} style={{ color: "#FFC107" }} />
-                  </div>
-                  <div>
-                    <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
-                      {items.filter(item => isNearingExpiry(item.expiryDate)).length}
-                    </h3>
-                    <p className="mb-0" style={{ color: "#6c757d" }}>Nearing Expiry</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="card h-100" style={{ 
-                borderRadius: "10px", 
-                border: "none", 
-                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-              }}>
-                <div className="card-body d-flex align-items-center">
-                  <div style={{ 
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "rgba(233, 30, 99, 0.1)",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "15px"
-                  }}>
-                    <FaTag size={25} style={{ color: "#E91E63" }} />
-                  </div>
-                  <div>
-                    <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
-                      {uniqueCategories.length}
-                    </h3>
-                    <p className="mb-0" style={{ color: "#00BCD4" }}>Categories</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="card h-100" style={{ 
-                borderRadius: "10px", 
-                border: "none", 
-                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
-              }}>
-                <div className="card-body d-flex align-items-center">
-                  <div style={{ 
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "rgba(244, 67, 54, 0.1)",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "15px"
-                  }}>
-                    <FaExclamationTriangle size={25} style={{ color: "#F44336" }} />
-                  </div>
-                  <div>
-                    <h3 className="mb-0" style={{ fontSize: "24px", fontWeight: "700" }}>
-                      {items.filter(item => isExpired(item.expiryDate)).length}
-                    </h3>
-                    <p className="mb-0" style={{ color: "#6c757d" }}>Expired Items</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="table-responsive" style={{ borderRadius: "10px", overflow: "hidden", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" }}>
-            <table className="table table-hover mb-0">
-              <thead>
-                <tr style={{ 
-                  backgroundColor: "#f8f9fa", 
-                  borderBottom: "2px solid #e9ecef" 
-                }}>
-                  <th scope="col" style={{ 
-                    padding: "15px 20px", 
-                    fontSize: "15px", 
-                    fontWeight: "600", 
-                    color: "#495057" 
-                  }}>Name</th>
-                  <th scope="col" style={{ 
-                    padding: "15px 20px", 
-                    fontSize: "15px", 
-                    fontWeight: "600", 
-                    color: "#495057" 
-                  }}>Quantity</th>
-                  <th scope="col" style={{ 
-                    padding: "15px 20px", 
-                    fontSize: "15px", 
-                    fontWeight: "600", 
-                    color: "#495057" 
-                  }}>Expiry Date</th>
-                  <th scope="col" style={{ 
-                    padding: "15px 20px", 
-                    fontSize: "15px", 
-                    fontWeight: "600", 
-                    color: "#495057" 
-                  }}>Category</th>
-                  <th scope="col" style={{ 
-                    padding: "15px 20px", 
-                    fontSize: "15px", 
-                    fontWeight: "600", 
-                    color: "#495057",
-                    textAlign: "center"
-                  }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.length > 0 ? (
-                  filteredItems.map((item) => (
-                    <tr key={item._id} style={{ 
-                      transition: "background-color 0.2s",
-                      borderBottom: "1px solid #e9ecef"
-                    }}>
-                      <td style={{ 
-                        padding: "15px 20px", 
-                        fontSize: "15px", 
-                        fontWeight: "500",
-                        verticalAlign: "middle"
-                      }}>{item.name}</td>
-                      <td style={{ 
-                        padding: "15px 20px", 
-                        fontSize: "15px",
-                        verticalAlign: "middle"
-                      }}>
-                        <span className="badge bg-light text-dark" style={{ 
-                          fontSize: "14px", 
-                          padding: "6px 12px", 
-                          borderRadius: "6px",
-                          fontWeight: "500"
-                        }}>
-                          {item.quantity} {item.unit}
-                        </span>
-                      </td>
-                      <td style={{ 
-                        padding: "15px 20px", 
-                        fontSize: "15px",
-                        verticalAlign: "middle"
-                      }}>
-                        {item.expiryDate ? (
-                          <span 
-                            className={`badge ${isExpired(item.expiryDate) ? 'bg-danger' : isNearingExpiry(item.expiryDate) ? 'bg-warning text-dark' : 'bg-success'}`}
-                            style={{ 
-                              fontSize: "14px", 
-                              padding: "6px 12px", 
-                              borderRadius: "6px" 
-                            }}
-                          >
-                            {new Date(item.expiryDate).toLocaleDateString()}
-                          </span>
-                        ) : (
-                          <span className="badge bg-secondary" style={{ 
-                            fontSize: "14px", 
-                            padding: "6px 12px", 
-                            borderRadius: "6px" 
-                          }}>N/A</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: "15px 20px", 
-                        fontSize: "15px",
-                        verticalAlign: "middle"
-                      }}>
-                        {item.category ? (
-                          <span className="badge bg-info text-dark" style={{ 
-                            fontSize: "14px", 
-                            padding: "6px 12px", 
-                            borderRadius: "6px"
-                          }}>
-                            {item.category}
-                          </span>
-                        ) : (
-                          <span className="badge bg-secondary" style={{ 
-                            fontSize: "14px", 
-                            padding: "6px 12px", 
-                            borderRadius: "6px" 
-                          }}>N/A</span>
-                        )}
-                      </td>
-                      <td style={{ 
-                        padding: "15px 20px", 
-                        fontSize: "15px",
-                        verticalAlign: "middle",
-                        textAlign: "center"
-                      }}>
-                        <button 
-                          onClick={() => handleEdit(item)} 
-                          className="btn btn-sm me-2" 
-                          style={{ 
-                            backgroundColor: "#00BCD4",
-                            color: "white",
-                            padding: "7px 15px",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            border: "none",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
-                          <FaEdit className="me-1" /> Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(item._id)} 
-                          className="btn btn-sm" 
-                          style={{ 
-                            backgroundColor: "#E91E63",
-                            color: "white",
-                            padding: "7px 15px",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            border: "none",
-                            transition: "all 0.2s ease"
-                          }}
-                        >
-                          <FaTrashAlt className="me-1" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="text-center py-5" style={{ fontSize: "16px", color: "#6c757d" }}>
-                      <FaList size={40} className="d-block mx-auto mb-3 text-muted" />
-                      No items found. Add some inventory or try a different search.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="p-4">
+          {children}
         </div>
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div
-          className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1050,
-          }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{ 
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{ 
-                background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{ 
-                  color: "white", 
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
-                  <FaExclamationTriangle className="me-2" />
-                  Confirm Delete
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  style={{ filter: "brightness(0) invert(1)" }}
-                  onClick={() => setShowDeleteModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body p-4" style={{ fontSize: "16px" }}>
-                <div className="text-center mb-3">
-                  <div style={{
-                    width: "70px",
-                    height: "70px",
-                    margin: "10px auto 20px",
-                    background: "rgba(233, 30, 99, 0.1)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}>
-                    <FaTrashAlt size={30} style={{ color: "#E91E63" }} />
-                  </div>
-                  <p className="mb-0">Are you sure you want to delete this item?</p>
-                  <p className="text-muted" style={{ fontSize: "14px" }}>This action cannot be undone.</p>
-                </div>
-              </div>
-              <div className="modal-footer" style={{ 
-                borderTop: "1px solid #f0f0f0", 
-                padding: "15px"
-              }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline-secondary" 
-                  onClick={() => setShowDeleteModal(false)}
-                  style={{ 
-                    borderRadius: "8px", 
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
-                  onClick={confirmDelete}
-                  style={{ 
-                    borderRadius: "8px", 
-                    padding: "10px 18px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
-                    border: "none"
-                  }}
-                >
-                  Delete Item
-                </button>
-              </div>
-            </div>
+        {footer && (
+          <div className="p-4 border-top border-secondary border-opacity-25 d-flex justify-content-end gap-2">
+            {footer}
           </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div
-          className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1050,
-          }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{ 
-              borderRadius: "15px",
-              border: "none",
-              overflow: "hidden"
-            }}>
-              <div className="modal-header" style={{ 
-                background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                borderBottom: "none",
-                padding: "20px 25px"
-              }}>
-                <h5 className="modal-title" style={{ 
-                  color: "white", 
-                  fontWeight: "600",
-                  fontSize: "20px"
-                }}>
-                  <FaEdit className="me-2" />
-                  Edit Item
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  style={{ filter: "brightness(0) invert(1)" }}
-                  onClick={() => setShowEditModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body p-4">
-                <form onSubmit={handleEditSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="name" className="form-label" style={{ 
-                      fontWeight: "600", 
-                      fontSize: "15px", 
-                      color: "#2c3e50",
-                      marginBottom: "8px"
-                    }}>
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      style={{ 
-                        borderRadius: "8px", 
-                        border: "2px solid #e0e0e0", 
-                        padding: "10px 15px",
-                        fontSize: "15px"
-                      }}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="quantity" className="form-label" style={{ 
-                      fontWeight: "600", 
-                      fontSize: "15px", 
-                      color: "#2c3e50",
-                      marginBottom: "8px"
-                    }}>
-                      Quantity
-                    </label>
-                    <div className="d-flex">
-                      <input
-                        type="number"
-                        className="form-control"
-                        id="quantity"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        required
-                        style={{ 
-                          borderRadius: "8px 0 0 8px", 
-                          border: "2px solid #e0e0e0", 
-                          borderRight: "none",
-                          padding: "10px 15px",
-                          fontSize: "15px",
-                          flex: "2"
-                        }}
-                      />
-                      <select
-                        className="form-select"
-                        value={unit}
-                        onChange={(e) => setUnit(e.target.value)}
-                        style={{ 
-                          borderRadius: "0 8px 8px 0", 
-                          border: "2px solid #e0e0e0", 
-                          borderLeft: "none",
-                          padding: "10px 15px",
-                          fontSize: "15px",
-                          flex: "1",
-                          backgroundColor: "#f8f9fa"
-                        }}
-                      >
-                        <option value="kg">kg</option>
-                        <option value="liters">liters</option>
-                        <option value="pieces">pieces</option>
-                        <option value="grams">grams</option>
-                        <option value="ml">ml</option>
-                        <option value="packs">packs</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="expiryDate" className="form-label" style={{ 
-                      fontWeight: "600", 
-                      fontSize: "15px", 
-                      color: "#2c3e50",
-                      marginBottom: "8px"
-                    }}>
-                      Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      id="expiryDate"
-                      value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
-                      style={{ 
-                        borderRadius: "8px", 
-                        border: "2px solid #e0e0e0", 
-                        padding: "10px 15px",
-                        fontSize: "15px"
-                      }}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="category" className="form-label" style={{ 
-                      fontWeight: "600", 
-                      fontSize: "15px", 
-                      color: "#2c3e50",
-                      marginBottom: "8px"
-                    }}>
-                      Category
-                    </label>
-                    <select
-                      className="form-select"
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      style={{ 
-                        borderRadius: "8px", 
-                        border: "2px solid #e0e0e0", 
-                        padding: "10px 15px",
-                        fontSize: "15px"
-                      }}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map((cat) => (
-                        <option key={cat._id} value={cat.name}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="d-grid mt-4">
-                    <button 
-                      type="submit" 
-                      className="btn btn-success"
-                      style={{ 
-                        borderRadius: "8px", 
-                        padding: "12px",
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        background: "linear-gradient(135deg, #00BCD4 0%, #00838F 100%)",
-                        border: "none",
-                        boxShadow: "0 4px 10px rgba(0, 188, 212, 0.3)",
-                      }}
-                    >
-                      Update Item
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom CSS */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          
-          .form-control:focus, .form-select:focus {
-            border-color: #00BCD4 !important;
-            box-shadow: 0 0 0 0.25rem rgba(0, 188, 212, 0.25) !important;
-          }
-          
-          .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-          }
-          
-          tr:hover {
-            background-color: #f8f9fa;
-          }
-        `}
-      </style>
+        )}
+      </motion.div>
     </div>
   );
 };
 
-export default InventoryList;
+// --- Notification Component ---
+const Notification = ({ message, type, onClose }) => {
+  const isSuccess = type === "success";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -50, x: '-50%' }}
+      animate={{ opacity: 1, y: 0, x: '-50%' }}
+      exit={{ opacity: 0, y: -50, x: '-50%' }}
+      style={{
+        position: 'fixed', top: '20px', left: '50%', zIndex: 1200,
+        backgroundColor: isSuccess ? 'rgba(6, 182, 212, 0.9)' : 'rgba(239, 68, 68, 0.9)',
+        color: 'white', padding: '12px 24px', borderRadius: '50px',
+        backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', gap: '12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)'
+      }}
+    >
+      {isSuccess ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+      <span style={{ fontWeight: 500 }}>{message}</span>
+      <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white' }}><X size={18} /></button>
+    </motion.div>
+  );
+};
+
+const InventoryPage = () => {
+  // --- State ---
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+
+  // Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    id: null, name: "", quantity: "", unit: "pieces", expiryDate: "", category: ""
+  });
+
+  // UI State
+  const [notification, setNotification] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const navigate = useNavigate();
+  const reportRef = useRef(null);
+
+  // --- Styles ---
+  const inputStyle = {
+    background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.1)',
+    color: 'white', borderRadius: '12px', padding: '12px'
+  };
+  const labelStyle = { color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px' };
+
+  // --- Helpers ---
+  const isExpired = (date) => date && new Date(date) < new Date();
+  const isNearing = (date) => {
+    if (!date) return false;
+    const diff = Math.floor((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 7;
+  };
+
+  // --- Effects ---
+  useEffect(() => {
+    fetchData();
+  }, [navigate]);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) { navigate("/login"); return; }
+      
+      const [itemsRes, catsRes] = await Promise.all([
+        axios.get("http://localhost:5002/inventory", { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get("http://localhost:5002/api/categories", { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      
+      setItems(itemsRes.data);
+      setCategories(catsRes.data.categories);
+    } catch (e) { showNotification("Error fetching data", "error"); } 
+    finally { setIsLoading(false); }
+  };
+
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // --- Handlers ---
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const validate = () => {
+    if (!formData.name.trim()) { showNotification("Name is required", "error"); return false; }
+    if (!formData.quantity || formData.quantity <= 0) { showNotification("Invalid quantity", "error"); return false; }
+    if (!formData.category) { showNotification("Category is required", "error"); return false; }
+    return true;
+  };
+
+  const handleSave = async (isEdit = false) => {
+    if (!validate()) return;
+    try {
+      const token = localStorage.getItem("token");
+      const url = isEdit 
+        ? `http://localhost:5002/inventory/${formData.id}` 
+        : "http://localhost:5002/inventory";
+      const method = isEdit ? axios.put : axios.post;
+
+      await method(url, formData, { headers: { Authorization: `Bearer ${token}` } });
+      
+      showNotification(isEdit ? "Item updated!" : "Item added!", "success");
+      fetchData();
+      setShowAddModal(false);
+      setShowEditModal(false);
+      resetForm();
+    } catch (e) { showNotification("Operation failed", "error"); }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5002/inventory/${deleteId}`, { headers: { Authorization: `Bearer ${token}` } });
+      showNotification("Item deleted", "success");
+      fetchData();
+      setDeleteId(null);
+    } catch (e) { showNotification("Delete failed", "error"); }
+  };
+
+  const openEdit = (item) => {
+    setFormData({
+      id: item._id,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      expiryDate: item.expiryDate ? item.expiryDate.slice(0, 10) : "",
+      category: item.category || ""
+    });
+    setShowEditModal(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ id: null, name: "", quantity: "", unit: "pieces", expiryDate: "", category: "" });
+  };
+
+  const generatePDF = () => {
+    setIsGenerating(true);
+    html2canvas(reportRef.current, { scale: 2 }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, (canvas.height * 210 / canvas.width));
+      pdf.save(`Inventory_Report_${new Date().toLocaleDateString()}.pdf`);
+      setIsGenerating(false);
+      showNotification("Report Downloaded", "success");
+    });
+  };
+
+  // Filter Logic
+  const filteredItems = items.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterCategory === "" || item.category === filterCategory)
+  );
+
+  // Form JSX (Shared between Add/Edit)
+  const FormContent = () => (
+    <>
+      <div className="mb-3">
+        <label style={labelStyle}>ITEM NAME</label>
+        <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="form-control" placeholder="e.g. Milk" style={inputStyle} />
+      </div>
+      <div className="row g-2 mb-3">
+        <div className="col-8">
+          <label style={labelStyle}>QUANTITY</label>
+          <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} className="form-control" placeholder="0.00" style={inputStyle} />
+        </div>
+        <div className="col-4">
+          <label style={labelStyle}>UNIT</label>
+          <select name="unit" value={formData.unit} onChange={handleInputChange} className="form-select" style={{ ...inputStyle, backgroundColor: '#0f172a' }}>
+            <option value="pieces">Pcs</option><option value="kg">Kg</option><option value="liters">L</option>
+          </select>
+        </div>
+      </div>
+      <div className="mb-3">
+        <label style={labelStyle}>CATEGORY</label>
+        <select name="category" value={formData.category} onChange={handleInputChange} className="form-select" style={{ ...inputStyle, backgroundColor: '#0f172a' }}>
+          <option value="">Select...</option>
+          {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+        </select>
+      </div>
+      <div className="mb-3">
+        <label style={labelStyle}>EXPIRY DATE</label>
+        <input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleInputChange} className="form-control" style={inputStyle} />
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{
+      minHeight: '100vh', backgroundColor: '#0f172a', color: '#f8fafc',
+      paddingTop: '40px', paddingBottom: '80px', fontFamily: '"Inter", sans-serif'
+    }}>
+      
+      {/* Scrollbar Style & Table Overrides */}
+      <style>{`
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .form-control:focus, .form-select:focus { border-color: #06b6d4 !important; box-shadow: 0 0 0 4px rgba(6,182,212,0.1) !important; }
+        
+        /* Force Dark Table */
+        .table { --bs-table-bg: transparent; color: #e2e8f0; }
+        .table-hover > tbody > tr:hover > * { --bs-table-accent-bg: rgba(255,255,255,0.05); color: white; }
+        .table td, .table th { border-bottom-color: rgba(255,255,255,0.05); }
+        .table th { background-color: rgba(15, 23, 42, 0.8) !important; }
+      `}</style>
+
+      {/* Background Glow */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '500px', background: 'radial-gradient(circle at 50% -20%, rgba(6, 182, 212, 0.15), transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
+
+      <AnimatePresence>
+        {notification && <Notification {...notification} onClose={() => setNotification(null)} />}
+      </AnimatePresence>
+
+      {/* --- Add Modal --- */}
+      <AnimatePresence>
+        {showAddModal && (
+          <Modal title="Add Inventory Item" isOpen={showAddModal} onClose={() => setShowAddModal(false)}
+            footer={
+              <>
+                <button className="btn btn-outline-light border-0" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button className="btn fw-bold text-white" onClick={() => handleSave(false)} style={{ background: '#06b6d4', padding: '8px 20px', borderRadius: '10px' }}>Save Item</button>
+              </>
+            }
+          >
+            {FormContent()}
+          </Modal>
+        )}
+      </AnimatePresence>
+
+      {/* --- Edit Modal --- */}
+      <AnimatePresence>
+        {showEditModal && (
+          <Modal title="Edit Item" isOpen={showEditModal} onClose={() => setShowEditModal(false)}
+            footer={
+              <>
+                <button className="btn btn-outline-light border-0" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button className="btn fw-bold text-white" onClick={() => handleSave(true)} style={{ background: '#f59e0b', padding: '8px 20px', borderRadius: '10px' }}>Update Item</button>
+              </>
+            }
+          >
+            {FormContent()}
+          </Modal>
+        )}
+      </AnimatePresence>
+
+      {/* --- Delete Modal --- */}
+      <AnimatePresence>
+        {deleteId && (
+           <Modal title="Confirm Delete" isOpen={!!deleteId} onClose={() => setDeleteId(null)}
+             footer={
+               <>
+                 <button className="btn btn-outline-light border-0" onClick={() => setDeleteId(null)}>Cancel</button>
+                 <button className="btn btn-danger fw-bold" onClick={handleDelete} style={{ padding: '8px 20px', borderRadius: '10px' }}>Delete Permanently</button>
+               </>
+             }
+           >
+             <div className="text-center">
+                <AlertTriangle size={48} className="text-danger mb-3" />
+                <p className="text-muted">Are you sure you want to delete this item? This action cannot be undone.</p>
+             </div>
+           </Modal>
+        )}
+      </AnimatePresence>
+
+      {/* --- Hidden Report --- */}
+      <div style={{ position: "absolute", left: "-9999px" }}>
+        <div ref={reportRef} style={{ padding: "40px", fontFamily: "Arial", background: "white", width: "210mm", color: "black" }}>
+          <h1 style={{ color: "#06b6d4", borderBottom: "2px solid #06b6d4", paddingBottom: "10px" }}>Inventory Report</h1>
+          <p style={{ textAlign: "right", color: "#666" }}>Generated: {new Date().toLocaleDateString()}</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "20px" }}>
+            <thead>
+              <tr style={{ background: "#06b6d4", color: "white" }}>
+                <th style={{ padding: "10px", textAlign: "left" }}>Name</th>
+                <th style={{ padding: "10px", textAlign: "left" }}>Qty</th>
+                <th style={{ padding: "10px", textAlign: "left" }}>Category</th>
+                <th style={{ padding: "10px", textAlign: "left" }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? "#f1f5f9" : "white" }}>
+                  <td style={{ padding: "10px" }}>{item.name}</td>
+                  <td style={{ padding: "10px" }}>{item.quantity} {item.unit}</td>
+                  <td style={{ padding: "10px" }}>{item.category}</td>
+                  <td style={{ padding: "10px" }}>{isExpired(item.expiryDate) ? "Expired" : "Good"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+        
+        {/* Header */}
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="d-flex align-items-center mb-3 mb-md-0">
+            <Link to="/" className="text-decoration-none me-3">
+              <div className="btn btn-outline-light border-0 rounded-circle p-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <ArrowLeft size={24} />
+              </div>
+            </Link>
+            <h1 className="fw-bold m-0 display-6">Inventory <span style={{ color: '#06b6d4' }}>List</span></h1>
+          </div>
+          <button onClick={generatePDF} className="btn btn-outline-light d-flex align-items-center gap-2" disabled={isGenerating}>
+            {isGenerating ? <span className="spinner-border spinner-border-sm"/> : <Download size={18} />} Export PDF
+          </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="card border-0 mb-4" style={{ background: '#1e293b', borderRadius: '16px' }}>
+          <div className="card-body p-3 d-flex flex-column flex-md-row gap-3">
+             <div className="position-relative flex-grow-1">
+                <Search size={20} className="position-absolute text-muted" style={{ top: '12px', left: '15px' }} />
+                <input type="text" className="form-control ps-5" placeholder="Search items..." 
+                  value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  style={{ background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '10px', height: '45px' }} />
+             </div>
+             <select 
+                value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
+                className="form-select"
+                style={{ background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '10px', height: '45px', width: '200px' }}
+             >
+                <option value="">All Categories</option>
+                {categories.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+             </select>
+             <button onClick={() => { resetForm(); setShowAddModal(true); }} 
+               className="btn text-white fw-bold d-flex align-items-center gap-2 px-4" 
+               style={{ background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)', borderRadius: '10px' }}>
+               <Plus size={20} /> Add Item
+             </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="card border-0 shadow-lg" style={{ background: '#1e293b', borderRadius: '16px', overflow: 'hidden' }}>
+          <div className="table-responsive">
+             <table className="table table-hover mb-0">
+                <thead style={{ background: 'rgba(15, 23, 42, 0.5)' }}>
+                   <tr>
+                      <th className="py-3 px-4 text-white fw-bold">ITEM NAME</th>
+                      <th className="py-3 px-4 text-white fw-bold">QUANTITY</th>
+                      <th className="py-3 px-4 text-white fw-bold">CATEGORY</th>
+                      <th className="py-3 px-4 text-white fw-bold">STATUS</th>
+                      <th className="py-3 px-4 text-white fw-bold text-end">ACTIONS</th>
+                   </tr>
+                </thead>
+                <tbody>
+                   {isLoading ? (
+                      <tr><td colSpan="5" className="text-center py-5"><div className="spinner-border text-info"/></td></tr>
+                   ) : filteredItems.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center py-5 text-muted">No items found.</td></tr>
+                   ) : (
+                      filteredItems.map(item => {
+                        const expired = isExpired(item.expiryDate);
+                        const nearing = isNearing(item.expiryDate);
+                        return (
+                          <tr key={item._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                             <td className="py-3 px-4 align-middle fw-bold text-white" style={{ background: 'transparent' }}>{item.name}</td>
+                             <td className="py-3 px-4 align-middle" style={{ background: 'transparent' }}>
+                                <span className="badge fw-normal" style={{ background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '6px 12px' }}>
+                                  {item.quantity} {item.unit}
+                                </span>
+                             </td>
+                             <td className="py-3 px-4 align-middle text-info" style={{ background: 'transparent' }}>{item.category || "-"}</td>
+                             <td className="py-3 px-4 align-middle" style={{ background: 'transparent' }}>
+                                {expired ? (
+                                  <span className="badge fw-normal" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }}>Expired</span>
+                                ) : nearing ? (
+                                  <span className="badge fw-normal" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' }}>Expiring Soon</span>
+                                ) : (
+                                  <span className="badge fw-normal" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981' }}>Good</span>
+                                )}
+                             </td>
+                             <td className="py-3 px-4 align-middle text-end" style={{ background: 'transparent' }}>
+                                <button onClick={() => openEdit(item)} className="btn btn-sm me-2" style={{ background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4', border: 'none' }}><Edit2 size={16}/></button>
+                                <button onClick={() => { setDeleteId(item._id); deleteId && setShowAddModal(false); }} className="btn btn-sm" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none' }}><Trash2 size={16}/></button>
+                             </td>
+                          </tr>
+                        );
+                      })
+                   )}
+                </tbody>
+             </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default InventoryPage;

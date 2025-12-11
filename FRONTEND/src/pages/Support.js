@@ -1,163 +1,208 @@
 import React from "react";
-import { 
-  FaQuestionCircle,
-  FaUser,
-  FaList,
-  FaExclamationTriangle
-} from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { 
+  HelpCircle, 
+  Mail, 
+  BookOpen, 
+  AlertTriangle, 
+  ArrowLeft, 
+  ArrowRight 
+} from "lucide-react";
 
 const SupportHeader = () => {
+  // --- Data & Config ---
   const supportCategories = [
-    { title: "FAQs", icon: <FaQuestionCircle size={24} />, desc: "Common questions about HomeStock", path: "/ChatBot" },
-    { title: "Contact Us", icon: <FaUser size={24} />, desc: "For direct inquiries", path: "/contact" },
-    { title: "User Guide", icon: <FaList size={24} />, desc: "Step-by-step instructions", path: "/user-guide" },
-    { title: "Report an Issue", icon: <FaExclamationTriangle size={24} />, desc: "Bug reporting form", path: "/report-issue" }
+    { 
+      title: "FAQs", 
+      icon: <HelpCircle size={28} />, 
+      desc: "Common questions about HomeStock.", 
+      path: "/ChatBot", 
+      color: "#38bdf8" // Sky Blue
+    },
+    { 
+      title: "Contact Us", 
+      icon: <Mail size={28} />, 
+      desc: "Reach out for direct inquiries.", 
+      path: "/contact", 
+      color: "#818cf8" // Indigo
+    },
+    { 
+      title: "User Guide", 
+      icon: <BookOpen size={28} />, 
+      desc: "Step-by-step instructions.", 
+      path: "/user-guide", 
+      color: "#34d399" // Emerald
+    },
+    { 
+      title: "Report an Issue", 
+      icon: <AlertTriangle size={28} />, 
+      desc: "Found a bug? Let us know.", 
+      path: "/report-issue", 
+      color: "#f87171" // Red
+    }
   ];
 
-  const styles = {
-    supportHeader: {
-      background: "linear-gradient(to bottom, #f9fafb, #f3f4f6)",
-      padding: "3rem 0"
-    },
-    container: {
-      maxWidth: "72rem",
-      marginLeft: "auto",
-      marginRight: "auto",
-      paddingLeft: "1rem",
-      paddingRight: "1rem"
-    },
-    textCenter: {
-      textAlign: "center",
-      marginBottom: "3rem"
-    },
-    heading: {
-      fontSize: "3rem",
-      fontWeight: "700",
-      marginBottom: "1.5rem",
-      background: "linear-gradient(135deg, #2D7D9A 0%, #19B8B8 100%)",
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent"
-    },
-    subHeading: {
-      fontSize: "1.125rem",
-      color: "#4b5563",
-      maxWidth: "42rem",
-      marginLeft: "auto",
-      marginRight: "auto"
-    },
-    quickSupportSection: {
-      marginBottom: "4rem"
-    },
-    sectionHeading: {
-      color: "#0f766e",
-      fontWeight: "700",
-      fontSize: "1.5rem",
-      marginBottom: "2rem",
-      paddingBottom: "0.75rem",
-      borderBottom: "2px solid #ccfbf1"
-    },
-    grid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(1, 1fr)",
-      gap: "1.5rem"
-    },
-    card: {
-      backgroundColor: "#ffffff",
-      borderRadius: "0.75rem",
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-      height: "100%",
-      transition: "box-shadow 0.3s ease"
-    },
-    cardHover: {
-      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
-    },
-    cardLink: {
-      display: "block",
-      height: "100%",
-      padding: "1.5rem",
-      textAlign: "center",
-      textDecoration: "none"
-    },
-    iconContainer: {
-      width: "4rem",
-      height: "4rem",
-      marginLeft: "auto",
-      marginRight: "auto",
-      marginBottom: "1rem",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "9999px",
-      color: "#0d9488",
-      backgroundColor: "#f0fdfa"
-    },
-    cardTitle: {
-      fontSize: "1.25rem",
-      fontWeight: "600",
-      color: "#0f766e",
-      marginBottom: "0.5rem"
-    },
-    cardDescription: {
-      color: "#4b5563",
-      marginBottom: "1rem"
-    },
-    learnMore: {
-      color: "#0d9488",
-      fontWeight: "500",
-      fontSize: "0.875rem"
+  // --- Animation Variants ---
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 }
     }
   };
 
-  // Media query styles to be applied conditionally
-  if (window.innerWidth >= 768) {
-    styles.grid.gridTemplateColumns = "repeat(2, 1fr)";
-  }
-  
-  if (window.innerWidth >= 1024) {
-    styles.grid.gridTemplateColumns = "repeat(4, 1fr)";
-  }
+  const cardVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100 }
+    }
+  };
 
   return (
-    <div style={styles.supportHeader}>
-      <div style={styles.container}>
-        {/* Page Header */}
-        <div style={styles.textCenter}>
-          <h1 style={styles.heading}>
-            How Can We Help You?
-          </h1>
-          <p style={styles.subHeading}>
-            Find answers, contact our team, or report issues. We're committed to making your HomeStock experience exceptional.
-          </p>
-        </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#0f172a', // Deep Slate 900
+      color: '#f8fafc',
+      paddingTop: '40px',
+      paddingBottom: '80px',
+      fontFamily: '"Inter", sans-serif',
+      position: 'relative',
+      overflowX: 'hidden'
+    }}>
+      
+      {/* Background Ambient Glow */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '800px',
+        height: '600px',
+        background: 'radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, rgba(15, 23, 42, 0) 70%)',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
+
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
         
-        {/* Quick Support Links Section */}
-        <div style={styles.quickSupportSection}>
-          <h2 style={styles.sectionHeading}>
-            Quick Support Links
-          </h2>
-          <div style={styles.grid}>
-            {supportCategories.map((item, index) => (
-              <div 
-                key={index} 
-                style={styles.card}
-                onMouseOver={(e) => e.currentTarget.style.boxShadow = styles.cardHover.boxShadow}
-                onMouseOut={(e) => e.currentTarget.style.boxShadow = styles.card.boxShadow}
-              >
-                <Link to={item.path} style={styles.cardLink}>
-                  <div style={styles.iconContainer}>
-                    {item.icon}
-                  </div>
-                  <h3 style={styles.cardTitle}>{item.title}</h3>
-                  <p style={styles.cardDescription}>{item.desc}</p>
-                  <div style={styles.learnMore}>
-                    Learn more →
-                  </div>
-                </Link>
-              </div>
-            ))}
+        {/* --- Header Section (Matching Settings.js) --- */}
+        <div className="d-flex align-items-center mb-5 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {/* Circular Back Arrow */}
+          <Link to="/" className="text-decoration-none me-4">
+            <motion.div 
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: '#38bdf8' }}
+              whileTap={{ scale: 0.9 }}
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#e2e8f0',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <ArrowLeft size={24} />
+            </motion.div>
+          </Link>
+
+          {/* Title */}
+          <div>
+            <motion.h1 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="fw-bold m-0 display-6"
+            >
+              Help <span style={{ color: '#38bdf8' }}>& Support</span>
+            </motion.h1>
           </div>
         </div>
+
+        {/* --- Hero Text --- */}
+        <div className="row justify-content-center text-center mb-5">
+          <div className="col-lg-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h2 className="fw-bold mb-3" style={{ fontSize: '2.5rem' }}>How can we help you?</h2>
+              <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
+                Find answers, contact our team, or report issues. We're committed to making your experience exceptional.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+        
+        {/* --- Cards Grid --- */}
+        <motion.div 
+          className="row g-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {supportCategories.map((item, index) => (
+            <div className="col-12 col-md-6 col-lg-3" key={index}>
+              <motion.div
+                variants={cardVariants}
+                whileHover={{ 
+                  y: -8, 
+                  boxShadow: `0px 15px 30px -10px ${item.color}30`, // Colored glow
+                  borderColor: 'rgba(255,255,255,0.2)' 
+                }}
+                className="card h-100"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                  backdropFilter: 'blur(12px)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  overflow: 'hidden',
+                  cursor: 'pointer'
+                }}
+              >
+                <Link to={item.path} style={{ textDecoration: 'none', color: 'inherit', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <div className="card-body p-4 d-flex flex-column align-items-center text-center">
+                    
+                    {/* Icon Bubble */}
+                    <div className="mb-4" style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '50%',
+                      background: `${item.color}20`, // Low opacity background
+                      color: item.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: `0 0 15px ${item.color}20`
+                    }}>
+                      {item.icon}
+                    </div>
+
+                    <h5 className="fw-bold mb-2 text-white">{item.title}</h5>
+                    <p className="small mb-4" style={{ color: '#94a3b8' }}>{item.desc}</p>
+                    
+                    {/* Learn More Link */}
+                    <div className="mt-auto pt-3 w-100 d-flex justify-content-center align-items-center" 
+                         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: item.color, marginRight: '8px' }}>
+                        Open
+                      </span>
+                      <ArrowRight size={16} color={item.color} />
+                    </div>
+                  
+                  </div>
+                </Link>
+              </motion.div>
+            </div>
+          ))}
+        </motion.div>
+
       </div>
     </div>
   );

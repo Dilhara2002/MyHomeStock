@@ -1,20 +1,18 @@
 import React from "react";
-import "./App.css"; // Import your styles (if applicable)
+import "./App.css"; 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
+import "bootstrap/dist/css/bootstrap.min.css"; 
 
-// Import components
-import Login from "./components/Login";
-import Signup from "./components/Signup";
-import Profile from "./components/Profile";
-import InventoryList from "./components/InventoryList";
-import InventoryForm from "./components/InventoryForm";
-import CategoryPage from "./components/AddCategory";
-import Shoppinglist from "./components/ShoppingList";
-import Navbar from "./components/Navbar";
-import Chatbot from "./components/ChatBot";
-
-
+// FIX: Changed './components/...' to './Components/...' to match your folder name
+import Login from "./Components/Login";
+import Signup from "./Components/Signup";
+import Profile from "./Components/Profile";
+import InventoryList from "./Components/InventoryList";
+import InventoryForm from "./Components/InventoryForm";
+import CategoryPage from "./Components/AddCategory";
+import Shoppinglist from "./Components/ShoppingList";
+import Navbar from "./Components/Navbar";
+import Chatbot from "./Components/ChatBot";
 
 // Import pages
 import HomePage from "./pages/Home";
