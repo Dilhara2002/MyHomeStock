@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   Send, Bot, User, ArrowLeft, Sparkles, 
-  MessageSquare, AlertCircle 
+  AlertCircle 
 } from 'lucide-react';
 
 function ChatBot() {
@@ -37,23 +37,27 @@ function ChatBot() {
     setIsTyping(true);
   
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5002/chatbot/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ message: userMessage.text })
       });
   
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
   
       const data = await response.json();
       const botMessage = { text: data.reply, sender: 'bot', id: Date.now() + 1 };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
+      console.error("Chatbot Error:", error); // Log the error for debugging
       const errorMessage = { 
-        text: 'Sorry, I encountered an error connecting to the server.', 
+        text: 'Sorry, I encountered an error. Please check your server logs or API quota.', 
         sender: 'bot', 
         isError: true,
         id: Date.now() + 1
