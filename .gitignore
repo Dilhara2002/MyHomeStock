@@ -1,2 +1,4 @@
 FRONTEND/node_modules/*
 BACKEND/node_modules/*
+config.bat
+node_modules
